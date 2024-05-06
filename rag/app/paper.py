@@ -278,10 +278,19 @@ def chunk(filename, binary=None, from_page=0, to_page=100000,
         # d["image"].save(f"./logs/{i}.jpg")
     return res
 """
+# def load_pdf_as_binary(file_path):
+#     with open(file_path, 'rb') as file:
+#         binary_data = file.read()
+#     return binary_data
+
 
 if __name__ == "__main__":
     import sys
-
+    #
+    # # Example usage:
+    # pdf_file_path = '/home/vishwastak/Documents/Apple.pdf'
+    # binary_data = load_pdf_as_binary(pdf_file_path)
     def dummy(prog=None, msg=""):
         pass
     chunk(sys.argv[1], callback=dummy)
+    # chunk("Apple.pdf",binary_data, callback=dummy)
