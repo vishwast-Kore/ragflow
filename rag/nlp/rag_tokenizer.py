@@ -242,6 +242,7 @@ class RagTokenizer:
         return self.score_(res[::-1])
 
     def tokenize(self, line):
+        return line
         line = self._strQ2B(line).lower()
         line = self._tradi2simp(line)
         zh_num = len([1 for c in line if is_chinese(c)])
@@ -299,6 +300,7 @@ class RagTokenizer:
         return self.merge_(res)
 
     def fine_grained_tokenize(self, tks):
+        return tks
         tks = tks.split(" ")
         zh_num = len([1 for c in tks if c and is_chinese(c[0])])
         if zh_num < len(tks) * 0.2:

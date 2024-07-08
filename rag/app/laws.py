@@ -15,7 +15,15 @@ from tika import parser
 import re
 from io import BytesIO
 from docx import Document
-
+import os
+import sys
+sys.path.insert(
+    0,
+    os.path.abspath(
+        os.path.join(
+            os.path.dirname(
+                os.path.abspath(__file__)),
+            '../../')))
 from api.db import ParserType
 from rag.nlp import bullets_category, is_english, tokenize, remove_contents_table, hierarchical_merge, \
     make_colon_as_title, add_positions, tokenize_chunks, find_codec
@@ -89,49 +97,50 @@ def chunk(filename, binary=None, from_page=0, to_page=100000,
     """
     doc = {
         "docnm_kwd": filename,
-        "title_tks": rag_tokenizer.tokenize(re.sub(r"\.[a-zA-Z]+$", "", filename))
+        "title_tks": rag_tokenizer.tokenize(re.sub(r"\.[a-zA-Z]+$", "", filename)),
+        "type":"text"
     }
     doc["title_sm_tks"] = rag_tokenizer.fine_grained_tokenize(doc["title_tks"])
     pdf_parser = None
     sections = []
-    if re.search(r"\.docx$", filename, re.IGNORECASE):
+    if kwargs.get("sys_file_type") == "docx":
         callback(0.1, "Start to parse.")
         for txt in Docx()(filename, binary):
             sections.append(txt)
         callback(0.8, "Finish parsing.")
 
-    elif re.search(r"\.pdf$", filename, re.IGNORECASE):
+    elif kwargs.get("sys_file_type") == "pdf":
         pdf_parser = Pdf() if kwargs.get(
             "parser_config", {}).get(
             "layout_recognize", True) else PlainParser()
         for txt, poss in pdf_parser(filename if not binary else binary,
                                     from_page=from_page, to_page=to_page, callback=callback)[0]:
             sections.append(txt + poss)
-
-    elif re.search(r"\.txt$", filename, re.IGNORECASE):
-        callback(0.1, "Start to parse.")
-        txt = ""
-        if binary:
-            encoding = find_codec(binary)
-            txt = binary.decode(encoding)
-        else:
-            with open(filename, "r") as f:
-                while True:
-                    l = f.readline()
-                    if not l:
-                        break
-                    txt += l
-        sections = txt.split("\n")
-        sections = [l for l in sections if l]
-        callback(0.8, "Finish parsing.")
-
-    elif re.search(r"\.doc$", filename, re.IGNORECASE):
-        callback(0.1, "Start to parse.")
-        binary = BytesIO(binary)
-        doc_parsed = parser.from_buffer(binary)
-        sections = doc_parsed['content'].split('\n')
-        sections = [l for l in sections if l]
-        callback(0.8, "Finish parsing.")
+    #
+    # elif re.search(r"\.txt$", filename, re.IGNORECASE):
+    #     callback(0.1, "Start to parse.")
+    #     txt = ""
+    #     if binary:
+    #         encoding = find_codec(binary)
+    #         txt = binary.decode(encoding)
+    #     else:
+    #         with open(filename, "r") as f:
+    #             while True:
+    #                 l = f.readline()
+    #                 if not l:
+    #                     break
+    #                 txt += l
+    #     sections = txt.split("\n")
+    #     sections = [l for l in sections if l]
+    #     callback(0.8, "Finish parsing.")
+    #
+    # elif re.search(r"\.doc$", filename, re.IGNORECASE):
+    #     callback(0.1, "Start to parse.")
+    #     binary = BytesIO(binary)
+    #     doc_parsed = parser.from_buffer(binary)
+    #     sections = doc_parsed['content'].split('\n')
+    #     sections = [l for l in sections if l]
+    #     callback(0.8, "Finish parsing.")
 
     else:
         raise NotImplementedError(
@@ -157,4 +166,10 @@ if __name__ == "__main__":
 
     def dummy(prog=None, msg=""):
         pass
+    kwargs = {"sys_file_type": "pdf"}
+
+    result = chunk('/home/vishwastak/Downloads/Apple.pdf', callback=dummy, **kwargs)
+    # result = chunk('/home/vishwastak/Downloads/Document AI Market Research.docx', callback=dummy, **kwargs)
+
+    chunk(sys.argv[1], from_page=0, to_page=10, callback=dummy)
     chunk(sys.argv[1], callback=dummy)

@@ -27,6 +27,7 @@ class RAGFlowPdfParser:
         self.ocr = OCR()
         if hasattr(self, "model_speciess"):
             self.layouter = LayoutRecognizer("layout." + self.model_speciess)
+
         else:
             self.layouter = LayoutRecognizer("layout")
         self.tbl_det = TableStructureRecognizer()
@@ -74,7 +75,7 @@ class RAGFlowPdfParser:
     def _y_dis(
             self, a, b):
         return (
-                       b["top"] + b["bottom"] - a["top"] - a["bottom"]) / 2
+                b["top"] + b["bottom"] - a["top"] - a["bottom"]) / 2
 
     def _match_proj(self, b):
         proj_patt = [
@@ -781,7 +782,7 @@ class RAGFlowPdfParser:
             res.append(
                 (cropout(
                     bxs,
-                    "figure", poss),
+                    "figure", poss), "figure",
                  [txt]))
             positions.append(poss)
 
@@ -791,7 +792,7 @@ class RAGFlowPdfParser:
             bxs = Recognizer.sort_Y_firstly(bxs, np.mean(
                 [(b["bottom"] - b["top"]) / 2 for b in bxs]))
             poss = []
-            res.append((cropout(bxs, "table", poss),
+            res.append((cropout(bxs, "table", poss), "table",
                         self.tbl_det.construct_table(bxs, html=return_html, is_english=self.is_english)))
             positions.append(poss)
 
@@ -925,6 +926,7 @@ class RAGFlowPdfParser:
 
     def __images__(self, fnm, zoomin=3, page_from=0,
                    page_to=299, callback=None):
+
         self.lefted_chars = []
         self.mean_height = []
         self.mean_width = []

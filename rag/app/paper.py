@@ -10,10 +10,19 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 #
+
 import copy
 import re
 from collections import Counter
-
+import os
+import sys
+sys.path.insert(
+    0,
+    os.path.abspath(
+        os.path.join(
+            os.path.dirname(
+                os.path.abspath(__file__)),
+            '../../')))
 from api.db import ParserType
 from rag.nlp import rag_tokenizer, tokenize, tokenize_table, add_positions, bullets_category, title_frequency, tokenize_chunks
 from deepdoc.parser import PdfParser, PlainParser
@@ -27,7 +36,7 @@ class Pdf(PdfParser):
         super().__init__()
 
     def __call__(self, filename, binary=None, from_page=0,
-                 to_page=100000, zoomin=3, callback=None):
+                 to_page=100000, zoomin=3, callback=None,extract_table_html=True):
         callback(msg="OCR is running...")
         self.__images__(
             filename if not binary else binary,
@@ -46,7 +55,7 @@ class Pdf(PdfParser):
         self._table_transformer_job(zoomin)
         callback(0.68, "Table analysis finished")
         self._text_merge()
-        tbls = self._extract_table_figure(True, zoomin, True, True)
+        tbls = self._extract_table_figure(True, zoomin, extract_table_html, True)
         column_width = np.median([b["x1"] - b["x0"] for b in self.boxes])
         self._concat_downward()
         self._filter_forpages()
@@ -136,24 +145,24 @@ def chunk(filename, binary=None, from_page=0, to_page=100000,
         The abstract of the paper will be sliced as an entire chunk, and will not be sliced partly.
     """
     pdf_parser = None
-    if re.search(r"\.pdf$", filename, re.IGNORECASE):
-        if not kwargs.get("parser_config", {}).get("layout_recognize", True):
-            pdf_parser = PlainParser()
-            paper = {
-                "title": filename,
-                "authors": " ",
-                "abstract": "",
-                "sections": pdf_parser(filename if not binary else binary, from_page=from_page, to_page=to_page)[0],
-                "tables": []
-            }
-        else:
-            pdf_parser = Pdf()
-            paper = pdf_parser(filename if not binary else binary,
-                               from_page=from_page, to_page=to_page, callback=callback)
+    if kwargs.get("sys_file_type") == "pdf":
+        # if not kwargs.get("parser_config", {}).get("layout_recognize", True):
+        #     pdf_parser = PlainParser()
+        #     paper = {
+        #         "title": filename,
+        #         "authors": " ",
+        #         "abstract": "",
+        #         "sections": pdf_parser(filename if not binary else binary, from_page=from_page, to_page=to_page)[0],
+        #         "tables": []
+        #     }
+        # else:
+        pdf_parser = Pdf()
+        paper = pdf_parser(filename if not binary else binary,
+                           from_page=from_page, to_page=to_page, callback=callback,extract_table_html=kwargs.get("extract_table_html", True))
     else:
         raise NotImplementedError("file type not supported yet(pdf supported)")
 
-    doc = {"docnm_kwd": filename, "authors_tks": rag_tokenizer.tokenize(paper["authors"]),
+    doc = {"docnm_kwd": filename, "authors_tks": rag_tokenizer.tokenize(paper["authors"]), "type" : "text",
            "title_tks": rag_tokenizer.tokenize(paper["title"] if paper["title"] else filename)}
     doc["title_sm_tks"] = rag_tokenizer.fine_grained_tokenize(doc["title_tks"])
     doc["authors_sm_tks"] = rag_tokenizer.fine_grained_tokenize(doc["authors_tks"])
@@ -284,4 +293,7 @@ if __name__ == "__main__":
 
     def dummy(prog=None, msg=""):
         pass
-    chunk(sys.argv[1], callback=dummy)
+    # chunk(sys.argv[1], callback=dummy)
+    kwargs = {"sys_file_type":"pdf"}
+    result=chunk('/home/vishwastak/Downloads/Apple.pdf', callback=dummy, **kwargs)
+    print(result)

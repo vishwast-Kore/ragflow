@@ -13,7 +13,7 @@ class Pdf(PdfParser):
         super().__init__()
 
     def __call__(self, filename, binary=None, from_page=0,
-                 to_page=100000, zoomin=3, callback=None):
+                 to_page=100000, zoomin=3, callback=None,extract_table_html=True):
         from timeit import default_timer as timer
         start = timer()
         callback(msg="OCR is running...")
@@ -36,7 +36,7 @@ class Pdf(PdfParser):
         self._table_transformer_job(zoomin)
         callback(0.67, "Table analysis finished.")
         self._text_merge()
-        tbls = self._extract_table_figure(True, zoomin, True, True)
+        tbls = self._extract_table_figure(True, zoomin, extract_table_html, True)
         self._concat_downward()
         self._filter_forpages()
         callback(0.68, "Text merging finished")
@@ -49,26 +49,27 @@ class Pdf(PdfParser):
                 for i, b in enumerate(self.boxes)], tbls
 
 
-def chunk(filename, binary=None, from_page=0, to_page=100000,
+def chunk(filename, binary=None, from_page=0, to_page=100000, extract_table_html=True,
           lang="Chinese", callback=None, **kwargs):
     """
         Only pdf is supported.
     """
     pdf_parser = None
 
-    if re.search(r"\.pdf$", filename, re.IGNORECASE):
+    if kwargs.get("sys_file_type") == "pdf":
         pdf_parser = Pdf() if kwargs.get(
             "parser_config", {}).get(
             "layout_recognize", True) else PlainParser()
         sections, tbls = pdf_parser(filename if not binary else binary,
-                                    from_page=from_page, to_page=to_page, callback=callback)
+                                    from_page=from_page, to_page=to_page, callback=callback,extract_table_html=kwargs.get("extract_table_html", True))
         if sections and len(sections[0]) < 3:
             sections = [(t, l, [[0] * 5]) for t, l in sections]
 
     else:
         raise NotImplementedError("file type not supported yet(pdf supported)")
     doc = {
-        "docnm_kwd": filename
+        "docnm_kwd": filename,
+        "type":"text"
     }
     doc["title_tks"] = rag_tokenizer.tokenize(re.sub(r"\.[a-zA-Z]+$", "", doc["docnm_kwd"]))
     doc["title_sm_tks"] = rag_tokenizer.fine_grained_tokenize(doc["title_tks"])
@@ -108,7 +109,7 @@ def chunk(filename, binary=None, from_page=0, to_page=100000,
 
     sections = [(txt, sec_ids[i], poss)
                 for i, (txt, _, poss) in enumerate(sections)]
-    for (img, rows), poss in tbls:
+    for (img, type, rows), poss in tbls:
         if not rows: continue
         sections.append((rows if isinstance(rows, str) else rows[0], -1,
                          [(p[0] + 1 - from_page, p[1], p[2], p[3], p[4]) for p in poss]))
@@ -147,5 +148,6 @@ if __name__ == "__main__":
     def dummy(prog=None, msg=""):
         pass
 
-
+    kwargs = {"sys_file_type":"pdf"}
+    result=chunk('/home/vishwastak/Downloads/Apple.pdf', callback=dummy, **kwargs)
     chunk(sys.argv[1], callback=dummy)
