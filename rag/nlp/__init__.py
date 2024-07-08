@@ -108,6 +108,7 @@ def is_english(texts):
 
 def tokenize(d, t, eng):
     d["content_with_weight"] = t
+    pass
     t = re.sub(r"</?(table|td|caption|tr|th)( [^<>]{0,12})?>", " ", t)
     d["content_ltks"] = rag_tokenizer.tokenize(t)
     d["content_sm_ltks"] = rag_tokenizer.fine_grained_tokenize(d["content_ltks"])
@@ -135,13 +136,14 @@ def tokenize_chunks(chunks, doc, eng, pdf_parser):
 def tokenize_table(tbls, doc, eng, batch_size=10):
     res = []
     # add tables
-    for (img, rows), poss in tbls:
+    for (img, type, rows), poss in tbls:
         if not rows:
             continue
         if isinstance(rows, str):
             d = copy.deepcopy(doc)
             tokenize(d, rows, eng)
             d["content_with_weight"] = rows
+            d['type'] = type
             if img: d["image"] = img
             if poss: add_positions(d, poss)
             res.append(d)
@@ -149,6 +151,7 @@ def tokenize_table(tbls, doc, eng, batch_size=10):
         de = "; " if eng else "； "
         for i in range(0, len(rows), batch_size):
             d = copy.deepcopy(doc)
+            d['type'] = type
             r = de.join(rows[i:i + batch_size])
             tokenize(d, r, eng)
             d["image"] = img
