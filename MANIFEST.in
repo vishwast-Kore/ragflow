@@ -1,0 +1,9 @@
+include ragflow/requirements.txt
+recursive-include ragflow/api *
+recursive-include ragflow/conf *
+recursive-include ragflow/deepdoc *
+recursive-include ragflow/docker *
+recursive-include ragflow/docs *
+recursive-include ragflow/logs *
+recursive-include ragflow/rag *
+recursive-include ragflow/web *
