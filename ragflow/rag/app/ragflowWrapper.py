@@ -1,6 +1,6 @@
 from ragflow.rag.app import paper, laws, naive, one, table, book, manual
-from plugin.SnippetGenerationUtil import *
-
+import logging
+from share.constants import Constants as ShareConstants
 debug_logger = logging.getLogger(ShareConstants.CHUNK_EXTRACT_LOGGER)
 
 class RagflowWrapper():
@@ -61,13 +61,15 @@ class RagflowPaperStrategy(RagflowWrapper):
             self.request_payload = request_payload
             filename = request_payload.get('local_file_path', '')
             extraction_config = request_payload.get('extraction_model', {}).get('config', {})
-            fromPage = extraction_config.get('fromPage', 0)
-            toPage = extraction_config.get('toPage', 100000)
+            ranges = extraction_config.get("pageRange", [[0, 100000]])
             request_payload['sys_file_type'] = request_payload.get("file_type", "")
             request_payload['extract_table_html'] = extraction_config.get('extractTableHTML', True)
-
-            raw_chunks = paper.chunk(filename=filename, fromPage=fromPage, toPage=toPage, callback=self.callback,
-                                           **request_payload)
+            raw_chunks = list()
+            for range in ranges:
+                from_page = range[0]
+                to_page = range[1]
+                raw_chunks.extend(paper.chunk(filename=filename, fromPage=from_page, toPage=to_page, callback=self.callback,
+                                           **request_payload))
             return raw_chunks
         except Exception as e:
             debug_logger.error("Ragflow Paper Strategy Failed to execute")
@@ -99,13 +101,16 @@ class RagflowLawStrategy(RagflowWrapper):
             self.request_payload = request_payload
             filename = request_payload.get('local_file_path', '')
             extraction_config = request_payload.get('extraction_model', {}).get('config', {})
-            fromPage = extraction_config.get('fromPage', 0)
-            toPage = extraction_config.get('toPage', 100000)
+            ranges = extraction_config.get("pageRange", [[0, 100000]])
             request_payload['sys_file_type'] = request_payload.get("file_type", "")
             request_payload['extract_table_html'] = extraction_config.get('extractTableHTML', True)
-
-            raw_chunks = laws.chunk(filename=filename, fromPage=fromPage, toPage=toPage, callback=self.callback,
-                                           **request_payload)
+            raw_chunks = list()
+            for range in ranges:
+                from_page = range[0]
+                to_page = range[1]
+                raw_chunks.extend(
+                    laws.chunk(filename=filename, fromPage=from_page, toPage=to_page, callback=self.callback,
+                                **request_payload))
             return raw_chunks
 
         except Exception as e:
@@ -137,14 +142,18 @@ class RagflowNaiveStrategy(RagflowWrapper):
             self.request_payload = request_payload
             filename = request_payload.get('local_file_path', '')
             extraction_config = request_payload.get('extraction_model', {}).get('config', {})
-            fromPage = extraction_config.get('fromPage', 0)
-            toPage = extraction_config.get('toPage', 100000)
+            ranges = extraction_config.get("pageRange", [[0, 100000]])
             request_payload['extract_table_html'] = extraction_config.get('extractTableHTML', True)
             request_payload['chunk_size'] = extraction_config.get('chunkLength', 1000)
             request_payload['delimiter'] = extraction_config.get('textSplitter', 100)
             request_payload['sys_file_type'] = request_payload.get("file_type", "")
-            raw_chunks = naive.chunk(filename=filename, fromPage=fromPage, toPage=toPage, callback=self.callback,
-                                           **request_payload)
+            raw_chunks = list()
+            for range in ranges:
+                from_page = range[0]
+                to_page = range[1]
+                raw_chunks.extend(
+                    naive.chunk(filename=filename, fromPage=from_page, toPage=to_page, callback=self.callback,
+                                **request_payload))
             return raw_chunks
 
         except Exception as e:
@@ -176,14 +185,18 @@ class RagflowOneStrategy(RagflowWrapper):
             self.request_payload = request_payload
             filename = request_payload.get('local_file_path', '')
             extraction_config = request_payload.get('extraction_model', {}).get('config', {})
-            fromPage = extraction_config.get('fromPage', 0)
-            toPage = extraction_config.get('toPage', 100000)
+            ranges = extraction_config.get("pageRange", [[0, 100000]])
             request_payload['extract_table_html'] = extraction_config.get('extractTableHTML', True)
             request_payload['chunk_size'] = extraction_config.get('chunkLength', 1000)
             request_payload['delimiter'] = extraction_config.get('textSplitter', 100)
             request_payload['sys_file_type'] = request_payload.get("file_type", "")
-            raw_chunks = one.chunk(filename=filename, fromPage=fromPage, toPage=toPage, callback=self.callback,
-                                           **request_payload)
+            raw_chunks = list()
+            for range in ranges:
+                from_page = range[0]
+                to_page = range[1]
+                raw_chunks.extend(
+                    one.chunk(filename=filename, fromPage=from_page, toPage=to_page, callback=self.callback,
+                                **request_payload))
             return raw_chunks
 
         except Exception as e:
@@ -217,12 +230,15 @@ class RagflowExcelStrategy(RagflowWrapper):
             self.request_payload = request_payload
             filename = request_payload.get('local_file_path', '')
             extraction_config = request_payload.get('extraction_model', {}).get('config', {})
-            fromPage = extraction_config.get('startRow', 0)
-            toPage = extraction_config.get('endRow', 100000)
-
+            ranges = extraction_config.get("rowRange", [[0, 100000]])
             request_payload['sys_file_type'] = request_payload.get("file_type", "")
-            raw_chunks = table.chunk(filename=filename, fromPage=fromPage, toPage=toPage,
-                                           callback=self.callback, **request_payload)
+            raw_chunks = list()
+            for range in ranges:
+                from_page = range[0]
+                to_page = range[1]
+                raw_chunks.extend(
+                    table.chunk(filename=filename, fromPage=from_page, toPage=to_page, callback=self.callback,
+                                **request_payload))
             return raw_chunks
 
         except Exception as e:
@@ -254,14 +270,18 @@ class RagflowBookStrategy(RagflowWrapper):
             self.request_payload = request_payload
             filename = request_payload.get('local_file_path', '')
             extraction_config = request_payload.get('extraction_model', {}).get('config', {})
-            fromPage = extraction_config.get('fromPage', 0)
-            toPage = extraction_config.get('toPage', 100000)
+            ranges = extraction_config.get("pageRange", [[0, 100000]])
             request_payload['extract_table_html'] = extraction_config.get('extractTableHTML', True)
             request_payload['chunk_size'] = extraction_config.get('chunkLength', 1000)
             request_payload['delimiter'] = extraction_config.get('textSplitter', 100)
             request_payload['sys_file_type'] = request_payload.get("file_type", "")
-            raw_chunks = book.chunk(filename=filename, fromPage=fromPage, toPage=toPage, callback=self.callback,
-                                           **request_payload)
+            raw_chunks = list()
+            for range in ranges:
+                from_page = range[0]
+                to_page = range[1]
+                raw_chunks.extend(
+                    book.chunk(filename=filename, fromPage=from_page, toPage=to_page, callback=self.callback,
+                                **request_payload))
             return raw_chunks
 
         except Exception as e:
@@ -293,14 +313,18 @@ class RagflowManualStrategy(RagflowWrapper):
             self.request_payload = request_payload
             filename = request_payload.get('local_file_path', '')
             extraction_config = request_payload.get('extraction_model', {}).get('config', {})
-            fromPage = extraction_config.get('fromPage', 0)
-            toPage = extraction_config.get('toPage', 100000)
+            ranges = extraction_config.get("pageRange", [[0, 100000]])
             request_payload['extract_table_html'] = extraction_config.get('extractTableHTML', True)
             request_payload['chunk_size'] = extraction_config.get('chunkLength', 1000)
             request_payload['delimiter'] = extraction_config.get('textSplitter', 100)
             request_payload['sys_file_type'] = request_payload.get("file_type", "")
-            raw_chunks = manual.chunk(filename=filename, fromPage=fromPage, toPage=toPage, callback=self.callback,
-                                           **request_payload)
+            raw_chunks = list()
+            for range in ranges:
+                from_page = range[0]
+                to_page = range[1]
+                raw_chunks.extend(
+                    manual.chunk(filename=filename, fromPage=from_page, toPage=to_page, callback=self.callback,
+                                **request_payload))
             return raw_chunks
 
         except Exception as e:
