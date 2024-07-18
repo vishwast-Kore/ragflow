@@ -8,7 +8,7 @@ class RagflowWrapper():
         self.request_payload = dict()
         self.parser_factory = {
             "paper": RagflowPaperStrategy,
-            "naive": RagflowNaiveStrategy,
+            "general": RagflowNaiveStrategy,
             "law": RagflowLawStrategy,
             "book": RagflowBookStrategy,
             "manual": RagflowManualStrategy,
