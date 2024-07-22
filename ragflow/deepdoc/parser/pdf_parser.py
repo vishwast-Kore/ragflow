@@ -409,12 +409,6 @@ class RAGFlowPdfParser:
             detach_feats = [b["x1"] < b_["x0"],
                             b["x0"] > b_["x1"]]
             if (any(feats) and not any(concatting_feats)) or any(detach_feats):
-                print(
-                    b["text"],
-                    b_["text"],
-                    any(feats),
-                    any(concatting_feats),
-                    any(detach_feats))
                 i += 1
                 continue
             # merge up and down

@@ -63,9 +63,9 @@ class Pdf(PdfParser):
 
         # clean mess
         if column_width < self.page_images[0].size[0] / zoomin / 2:
-            print("two_column...................", column_width,
-                  self.page_images[0].size[0] / zoomin / 2)
-            self.boxes = self.sort_X_by_page(self.boxes, column_width / 2)
+            # print("two_column...................", column_width,
+            #       self.page_images[0].size[0] / zoomin / 2)
+            self.boxes = self.sort_X_by_page(self.boxes, bookcolumn_width / 2)
         for b in self.boxes:
             b["text"] = re.sub(r"([\t 　]|\u3000){2,}", " ", b["text"].strip())
 
@@ -124,9 +124,6 @@ class Pdf(PdfParser):
             0.8, "Page {}~{}: Text merging finished".format(
                 from_page, min(
                     to_page, self.total_page)))
-        for b in self.boxes:
-            print(b["text"], b.get("layoutno"))
-        print(tbls)
 
         return {
             "title": title,
@@ -168,7 +165,6 @@ def chunk(filename, binary=None, from_page=0, to_page=100000,
     doc["authors_sm_tks"] = rag_tokenizer.fine_grained_tokenize(doc["authors_tks"])
     # is it English
     eng = lang.lower() == "english"  # pdf_parser.is_english
-    print("It's English.....", eng)
 
     res = tokenize_table(paper["tables"], doc, eng)
 
@@ -195,7 +191,6 @@ def chunk(filename, binary=None, from_page=0, to_page=100000,
         if lvl <= most_level and i > 0 and lvl != levels[i - 1]:
             sid += 1
         sec_ids.append(sid)
-        print(lvl, sorted_sections[i][0], most_level, sid)
 
     chunks = []
     last_sid = -2
