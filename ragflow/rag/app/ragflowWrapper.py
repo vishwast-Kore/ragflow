@@ -1,5 +1,6 @@
 from ragflow.rag.app import paper, laws, naive, one, table, book, manual
 import logging
+import traceback
 from share.constants import Constants as ShareConstants
 debug_logger = logging.getLogger(ShareConstants.CHUNK_EXTRACT_LOGGER)
 
