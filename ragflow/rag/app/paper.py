@@ -65,7 +65,7 @@ class Pdf(PdfParser):
         if column_width < self.page_images[0].size[0] / zoomin / 2:
             # print("two_column...................", column_width,
             #       self.page_images[0].size[0] / zoomin / 2)
-            self.boxes = self.sort_X_by_page(self.boxes, bookcolumn_width / 2)
+            self.boxes = self.sort_X_by_page(self.boxes, column_width / 2)
         for b in self.boxes:
             b["text"] = re.sub(r"([\t 　]|\u3000){2,}", " ", b["text"].strip())
 
