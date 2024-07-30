@@ -1,0 +1,27 @@
+Metadata-Version: 2.1
+Name: ragflow
+Version: 0.1.0
+Summary: Efficient Document-Based QA with Retrieval-Augmented Generation (RAG) and Large Language Models (LLM).
+Home-page: UNKNOWN
+Author: vishwast-Kore
+Author-email: vishwas.tak@kore.com
+License: Apache 2.0
+Platform: Mac
+Platform: Linux
+Platform: Windows
+Classifier: Development Status :: 4 - Beta
+Classifier: Intended Audience :: Science/Research
+Classifier: License :: OSI Approved :: Apache Software License
+Classifier: Operating System :: OS Independent
+Classifier: Programming Language :: Python
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.8
+Classifier: Programming Language :: Python :: 3.9
+Classifier: Programming Language :: Python :: 3.10
+Classifier: Topic :: Scientific/Engineering
+Classifier: Topic :: Scientific/Engineering :: Artificial Intelligence
+Classifier: Topic :: Software Development :: Libraries :: Python Modules
+Description-Content-Type: text/markdown
+
+UNKNOWN
+
