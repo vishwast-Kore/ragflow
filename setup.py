@@ -9,7 +9,7 @@ with open('./ragflow/requirements.txt') as f:
 
 setup(
     name=PACKAGE_NAME,
-    version="0.1.0",
+    version="0.11.0",
     description="Efficient Document-Based QA with Retrieval-Augmented Generation (RAG) and Large Language Models (LLM).",
     long_description="",
     long_description_content_type="text/markdown",

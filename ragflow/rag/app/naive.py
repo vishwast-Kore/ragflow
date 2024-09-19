@@ -15,8 +15,19 @@ from io import BytesIO
 from docx import Document
 from timeit import default_timer as timer
 import re
+import os
+import sys
+
+sys.path.insert(
+    0,
+    os.path.abspath(
+        os.path.join(
+            os.path.dirname(
+                os.path.abspath(__file__)),
+            '../../')))
 from deepdoc.parser.pdf_parser import PlainParser
-from rag.nlp import rag_tokenizer, naive_merge, tokenize_table, tokenize_chunks, find_codec, concat_img, naive_merge_docx, tokenize_chunks_docx
+from rag.nlp import rag_tokenizer, naive_merge, tokenize_table, tokenize_chunks, find_codec, concat_img, \
+    naive_merge_docx, tokenize_chunks_docx
 from deepdoc.parser import PdfParser, ExcelParser, DocxParser, HtmlParser, JsonParser, MarkdownParser, TxtParser
 from rag.settings import cron_logger
 from rag.utils import num_tokens_from_string
@@ -24,6 +35,7 @@ from PIL import Image
 from functools import reduce
 from markdown import markdown
 from docx.image.exceptions import UnrecognizedImageError
+
 
 class Docx(DocxParser):
     def __init__(self):
@@ -76,7 +88,7 @@ class Docx(DocxParser):
                         if last_image:
                             image_list.insert(0, last_image)
                             last_image = None
-                        lines.append((self.__clean(p.text), image_list, p.style.name if p.style else ""))
+                        lines.append((self.__clean(p.text), image_list, p.style.name))
                 else:
                     if current_image := self.get_picture(self.doc, p):
                         if lines:
@@ -93,14 +105,14 @@ class Docx(DocxParser):
 
         tbls = []
         for tb in self.doc.tables:
-            html= "<table>"
+            html = "<table>"
             for r in tb.rows:
                 html += "<tr>"
                 i = 0
                 while i < len(r.cells):
                     span = 1
                     c = r.cells[i]
-                    for j in range(i+1, len(r.cells)):
+                    for j in range(i + 1, len(r.cells)):
                         if c.text == r.cells[j].text:
                             span += 1
                             i = j
@@ -108,13 +120,13 @@ class Docx(DocxParser):
                     html += f"<td>{c.text}</td>" if span == 1 else f"<td colspan='{span}'>{c.text}</td>"
                 html += "</tr>"
             html += "</table>"
-            tbls.append(((None, html), ""))
+            tbls.append(((None, "table", html), ""))
         return new_line, tbls
 
 
 class Pdf(PdfParser):
     def __call__(self, filename, binary=None, from_page=0,
-                 to_page=100000, zoomin=3, callback=None):
+                 to_page=100000, zoomin=3, extract_table_html=True, callback=None):
         start = timer()
         callback(msg="OCR is running...")
         self.__images__(
@@ -134,10 +146,10 @@ class Pdf(PdfParser):
         callback(0.65, "Table analysis finished.")
         self._text_merge()
         callback(0.67, "Text merging finished")
-        tbls = self._extract_table_figure(True, zoomin, True, True)
-        #self._naive_vertical_merge()
+        tbls = self._extract_table_figure(True, zoomin, extract_table_html, True)
+        # self._naive_vertical_merge()
         self._concat_downward()
-        #self._filter_forpages()
+        # self._filter_forpages()
 
         cron_logger.info("layouts: {}".format(timer() - start))
         return [(b["text"], self._line_tag(b, zoomin))
@@ -159,15 +171,14 @@ class Markdown(MarkdownParser):
         tbls = []
         for sec in remainder.split("\n"):
             if num_tokens_from_string(sec) > 10 * self.chunk_token_num:
-                sections.append((sec[:int(len(sec)/2)], ""))
-                sections.append((sec[int(len(sec)/2):], ""))
+                sections.append((sec[:int(len(sec) / 2)], ""))
+                sections.append((sec[int(len(sec) / 2):], ""))
             else:
                 sections.append((sec, ""))
         print(tables)
         for table in tables:
             tbls.append(((None, markdown(table, extensions=['markdown.extensions.tables'])), ""))
         return sections, tbls
-
 
 
 def chunk(filename, binary=None, from_page=0, to_page=100000,
@@ -178,23 +189,25 @@ def chunk(filename, binary=None, from_page=0, to_page=100000,
         Successive text will be sliced into pieces using 'delimiter'.
         Next, these successive pieces are merge into chunks whose token number is no more than 'Max token number'.
     """
-
+    chunk_token_size = kwargs.get("chunk_size", 400)
+    delimiter = kwargs.get("delimiter", "\n。；！？")
     eng = lang.lower() == "english"  # is_english(cks)
     parser_config = kwargs.get(
         "parser_config", {
-            "chunk_token_num": 128, "delimiter": "\n!?。；！？", "layout_recognize": True})
+            "chunk_token_num": chunk_token_size, "delimiter": delimiter, "layout_recognize": True})
     doc = {
         "docnm_kwd": filename,
-        "title_tks": rag_tokenizer.tokenize(re.sub(r"\.[a-zA-Z]+$", "", filename))
+        "title_tks": rag_tokenizer.tokenize(re.sub(r"\.[a-zA-Z]+$", "", filename)),
+        "type": "text"
     }
     doc["title_sm_tks"] = rag_tokenizer.fine_grained_tokenize(doc["title_tks"])
     res = []
     pdf_parser = None
     sections = []
-    if re.search(r"\.docx$", filename, re.IGNORECASE):
+    if kwargs.get("sys_file_type") == "docx":
         callback(0.1, "Start to parse.")
         sections, tbls = Docx()(filename, binary)
-        res = tokenize_table(tbls, doc, eng)    # just for table
+        res = tokenize_table(tbls, doc, eng)  # just for table
 
         callback(0.8, "Finish parsing.")
         st = timer()
@@ -211,50 +224,51 @@ def chunk(filename, binary=None, from_page=0, to_page=100000,
         cron_logger.info("naive_merge({}): {}".format(filename, timer() - st))
         return res
 
-    elif re.search(r"\.pdf$", filename, re.IGNORECASE):
+    elif kwargs.get("sys_file_type") == "pdf":
         pdf_parser = Pdf(
         ) if parser_config.get("layout_recognize", True) else PlainParser()
         sections, tbls = pdf_parser(filename if not binary else binary,
-                                    from_page=from_page, to_page=to_page, callback=callback)
+                                    from_page=from_page, to_page=to_page, callback=callback,
+                                    extract_table_html=kwargs.get('extract_table_html', True))
         res = tokenize_table(tbls, doc, eng)
 
-    elif re.search(r"\.xlsx?$", filename, re.IGNORECASE):
-        callback(0.1, "Start to parse.")
-        excel_parser = ExcelParser()
-        sections = [(l, "") for l in excel_parser.html(binary) if l]
+    # elif re.search(r"\.xlsx?$", filename, re.IGNORECASE):
+    #     callback(0.1, "Start to parse.")
+    #     excel_parser = ExcelParser()
+    #     sections = [(l, "") for l in excel_parser.html(binary) if l]
 
-    elif re.search(r"\.(txt|py|js|java|c|cpp|h|php|go|ts|sh|cs|kt|sql)$", filename, re.IGNORECASE):
-        callback(0.1, "Start to parse.")
-        sections = TxtParser()(filename,binary,
-                               parser_config.get("chunk_token_num", 128),
-                               parser_config.get("delimiter", "\n!?;。；！？"))
-        callback(0.8, "Finish parsing.")
-    
-    elif re.search(r"\.(md|markdown)$", filename, re.IGNORECASE):
-        callback(0.1, "Start to parse.")
-        sections, tbls = Markdown(int(parser_config.get("chunk_token_num", 128)))(filename, binary)
-        res = tokenize_table(tbls, doc, eng)
-        callback(0.8, "Finish parsing.")
+    # elif re.search(r"\.(txt|py|js|java|c|cpp|h|php|go|ts|sh|cs|kt|sql)$", filename, re.IGNORECASE):
+    #     callback(0.1, "Start to parse.")
+    #     sections = TxtParser()(filename,binary,
+    #                            parser_config.get("chunk_token_num", 128),
+    #                            parser_config.get("delimiter", "\n!?;。；！？"))
+    #     callback(0.8, "Finish parsing.")
 
-    elif re.search(r"\.(htm|html)$", filename, re.IGNORECASE):
-        callback(0.1, "Start to parse.")
-        sections = HtmlParser()(filename, binary)
-        sections = [(l, "") for l in sections if l]
-        callback(0.8, "Finish parsing.")
+    # elif re.search(r"\.(md|markdown)$", filename, re.IGNORECASE):
+    #     callback(0.1, "Start to parse.")
+    #     sections, tbls = Markdown(int(parser_config.get("chunk_token_num", 128)))(filename, binary)
+    #     res = tokenize_table(tbls, doc, eng)
+    #     callback(0.8, "Finish parsing.")
 
-    elif re.search(r"\.json$", filename, re.IGNORECASE):
-        callback(0.1, "Start to parse.")
-        sections = JsonParser(int(parser_config.get("chunk_token_num", 128)))(binary)
-        sections = [(l, "") for l in sections if l]
-        callback(0.8, "Finish parsing.")
+    # elif re.search(r"\.(htm|html)$", filename, re.IGNORECASE):
+    #     callback(0.1, "Start to parse.")
+    #     sections = HtmlParser()(filename, binary)
+    #     sections = [(l, "") for l in sections if l]
+    #     callback(0.8, "Finish parsing.")
 
-    elif re.search(r"\.doc$", filename, re.IGNORECASE):
-        callback(0.1, "Start to parse.")
-        binary = BytesIO(binary)
-        doc_parsed = parser.from_buffer(binary)
-        sections = doc_parsed['content'].split('\n')
-        sections = [(l, "") for l in sections if l]
-        callback(0.8, "Finish parsing.")
+    # elif re.search(r"\.json$", filename, re.IGNORECASE):
+    #     callback(0.1, "Start to parse.")
+    #     sections = JsonParser(int(parser_config.get("chunk_token_num", 128)))(binary)
+    #     sections = [(l, "") for l in sections if l]
+    #     callback(0.8, "Finish parsing.")
+
+    # elif re.search(r"\.doc$", filename, re.IGNORECASE):
+    #     callback(0.1, "Start to parse.")
+    #     binary = BytesIO(binary)
+    #     doc_parsed = parser.from_buffer(binary)
+    #     sections = doc_parsed['content'].split('\n')
+    #     sections = [(l, "") for l in sections if l]
+    #     callback(0.8, "Finish parsing.")
 
     else:
         raise NotImplementedError(
@@ -276,7 +290,14 @@ def chunk(filename, binary=None, from_page=0, to_page=100000,
 if __name__ == "__main__":
     import sys
 
+
     def dummy(prog=None, msg=""):
         pass
 
-    chunk(sys.argv[1], from_page=0, to_page=10, callback=dummy)
+
+    # chunk(sys.argv[1], from_page=0, to_page=10, callback=dummy)
+    kwargs = {"sys_file_type": "pdf"}
+    result = chunk("/home/Ragul.Sivakumar/Downloads/sampleillustration.docx", callback=dummy, **kwargs)
+    with open('naiveResult.json', 'w') as file:
+        # Write the string to the file
+        file.write(str(result))
