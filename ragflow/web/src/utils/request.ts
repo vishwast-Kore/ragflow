@@ -1,12 +1,15 @@
 import { Authorization } from '@/constants/authorization';
+import { ResponseType } from '@/interfaces/database/base';
 import i18n from '@/locales/config';
-import authorizationUtil from '@/utils/authorizationUtil';
+import authorizationUtil, {
+  getAuthorization,
+} from '@/utils/authorization-util';
 import { message, notification } from 'antd';
 import { history } from 'umi';
 import { RequestMethod, extend } from 'umi-request';
-import { convertTheKeysOfTheObjectToSnake, getSearchValue } from './commonUtil';
+import { convertTheKeysOfTheObjectToSnake } from './common-util';
 
-const ABORT_REQUEST_ERR_MESSAGE = 'The user aborted a request.'; // 手动中断请求。errorHandler 抛出的error message
+const FAILED_TO_FETCH = 'Failed to fetch';
 
 const RetcodeMessage = {
   200: i18n.t('message.200'),
@@ -41,23 +44,17 @@ type ResultCode =
   | 502
   | 503
   | 504;
-/**
- * 异常处理程序
- */
-interface ResponseType {
-  retcode: number;
-  data: any;
-  retmsg: string;
-  status: number;
-}
+
 const errorHandler = (error: {
   response: Response;
   message: string;
 }): Response => {
   const { response } = error;
-  // 手动中断请求 abort
-  if (error.message === ABORT_REQUEST_ERR_MESSAGE) {
-    console.log('user abort  request');
+  if (error.message === FAILED_TO_FETCH) {
+    notification.error({
+      description: i18n.t('message.networkAnomalyDescription'),
+      message: i18n.t('message.networkAnomaly'),
+    });
   } else {
     if (response && response.status) {
       const errorText =
@@ -67,30 +64,18 @@ const errorHandler = (error: {
         message: `${i18n.t('message.requestError')} ${status}: ${url}`,
         description: errorText,
       });
-    } else if (!response) {
-      notification.error({
-        description: i18n.t('message.networkAnomalyDescription'),
-        message: i18n.t('message.networkAnomaly'),
-      });
     }
   }
   return response;
 };
 
-/**
- * 配置request请求时的默认参数
- */
 const request: RequestMethod = extend({
-  errorHandler, // 默认错误处理
+  errorHandler,
   timeout: 300000,
   getResponse: true,
 });
 
 request.interceptors.request.use((url: string, options: any) => {
-  const sharedId = getSearchValue('shared_id');
-  const authorization = sharedId
-    ? 'Bearer ' + sharedId
-    : authorizationUtil.getAuthorization();
   const data = convertTheKeysOfTheObjectToSnake(options.data);
   const params = convertTheKeysOfTheObjectToSnake(options.params);
 
@@ -101,7 +86,9 @@ request.interceptors.request.use((url: string, options: any) => {
       data,
       params,
       headers: {
-        ...(options.skipToken ? undefined : { [Authorization]: authorization }),
+        ...(options.skipToken
+          ? undefined
+          : { [Authorization]: getAuthorization() }),
         ...options.headers,
       },
       interceptors: true,
@@ -109,16 +96,12 @@ request.interceptors.request.use((url: string, options: any) => {
   };
 });
 
-/*
- * 请求response拦截器
- * */
-
 request.interceptors.response.use(async (response: any, options) => {
   if (options.responseType === 'blob') {
     return response;
   }
+
   const data: ResponseType = await response.clone().json();
-  // response 拦截
 
   if (data.retcode === 401 || data.retcode === 401) {
     notification.error({

@@ -1,36 +1,37 @@
-import { useSelectFileList } from '@/hooks/fileManagerHooks';
+import { useFetchFileList } from '@/hooks/file-manager-hooks';
 import { IFile } from '@/interfaces/database/file-manager';
 import { formatDate } from '@/utils/date';
-import { Button, Flex, Space, Table, Tag } from 'antd';
+import { Button, Flex, Space, Table, Tag, Typography } from 'antd';
 import { ColumnsType } from 'antd/es/table';
 import ActionCell from './action-cell';
 import FileToolbar from './file-toolbar';
 import {
-  useGetFilesPagination,
   useGetRowSelection,
   useHandleConnectToKnowledge,
   useHandleCreateFolder,
+  useHandleMoveFile,
   useHandleUploadFile,
   useNavigateToOtherFolder,
   useRenameCurrentFile,
-  useSelectFileListLoading,
 } from './hooks';
 
 import FileUploadModal from '@/components/file-upload-modal';
 import RenameModal from '@/components/rename-modal';
 import SvgIcon from '@/components/svg-icon';
-import { useTranslate } from '@/hooks/commonHooks';
-import { formatNumberWithThousandsSeparator } from '@/utils/commonUtil';
-import { getExtension } from '@/utils/documentUtils';
+import { useTranslate } from '@/hooks/common-hooks';
+import { formatNumberWithThousandsSeparator } from '@/utils/common-util';
+import { getExtension } from '@/utils/document-util';
 import ConnectToKnowledgeModal from './connect-to-knowledge-modal';
 import FolderCreateModal from './folder-create-modal';
 import styles from './index.less';
+import FileMovingModal from './move-file-modal';
+
+const { Text } = Typography;
 
 const FileManager = () => {
   const { t } = useTranslate('fileManager');
-  const fileList = useSelectFileList();
+  // const fileList = useSelectFileList();
   const { rowSelection, setSelectedRowKeys } = useGetRowSelection();
-  const loading = useSelectFileListLoading();
   const navigateToOtherFolder = useNavigateToOtherFolder();
   const {
     fileRenameVisible,
@@ -62,13 +63,21 @@ const FileManager = () => {
     initialValue,
     connectToKnowledgeLoading,
   } = useHandleConnectToKnowledge();
-  const { pagination } = useGetFilesPagination();
-
+  const {
+    showMoveFileModal,
+    moveFileVisible,
+    onMoveFileOk,
+    hideMoveFileModal,
+    moveFileLoading,
+  } = useHandleMoveFile(setSelectedRowKeys);
+  const { pagination, data, searchString, handleInputChange, loading } =
+    useFetchFileList();
   const columns: ColumnsType<IFile> = [
     {
       title: t('name'),
       dataIndex: 'name',
       key: 'name',
+      fixed: 'left',
       render(value, record) {
         return (
           <Flex gap={10} align="center">
@@ -82,10 +91,10 @@ const FileManager = () => {
                 className={styles.linkButton}
                 onClick={() => navigateToOtherFolder(record.id)}
               >
-                {value}
+                <Text ellipsis={{ tooltip: value }}>{value}</Text>
               </Button>
             ) : (
-              value
+              <Text ellipsis={{ tooltip: value }}>{value}</Text>
             )}
           </Flex>
         );
@@ -93,8 +102,8 @@ const FileManager = () => {
     },
     {
       title: t('uploadDate'),
-      dataIndex: 'create_date',
-      key: 'create_date',
+      dataIndex: 'create_time',
+      key: 'create_time',
       render(text) {
         return formatDate(text);
       },
@@ -138,6 +147,7 @@ const FileManager = () => {
             console.info(record);
           }}
           showRenameModal={showFileRenameModal}
+          showMoveFileModal={showMoveFileModal}
           showConnectToKnowledgeModal={showConnectToKnowledgeModal}
           setSelectedRowKeys={setSelectedRowKeys}
         ></ActionCell>
@@ -148,18 +158,22 @@ const FileManager = () => {
   return (
     <section className={styles.fileManagerWrapper}>
       <FileToolbar
+        searchString={searchString}
+        handleInputChange={handleInputChange}
         selectedRowKeys={rowSelection.selectedRowKeys as string[]}
         showFolderCreateModal={showFolderCreateModal}
         showFileUploadModal={showFileUploadModal}
         setSelectedRowKeys={setSelectedRowKeys}
+        showMoveFileModal={showMoveFileModal}
       ></FileToolbar>
       <Table
-        dataSource={fileList}
+        dataSource={data?.files}
         columns={columns}
         rowKey={'id'}
         rowSelection={rowSelection}
         loading={loading}
         pagination={pagination}
+        scroll={{ scrollToFirstRowOnChange: true, x: '100%' }}
       />
       <RenameModal
         visible={fileRenameVisible}
@@ -187,6 +201,14 @@ const FileManager = () => {
         onOk={onConnectToKnowledgeOk}
         loading={connectToKnowledgeLoading}
       ></ConnectToKnowledgeModal>
+      {moveFileVisible && (
+        <FileMovingModal
+          visible={moveFileVisible}
+          hideModal={hideMoveFileModal}
+          onOk={onMoveFileOk}
+          loading={moveFileLoading}
+        ></FileMovingModal>
+      )}
     </section>
   );
 };

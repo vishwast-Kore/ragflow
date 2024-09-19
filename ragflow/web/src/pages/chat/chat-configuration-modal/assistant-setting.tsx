@@ -1,19 +1,17 @@
-import { useFetchKnowledgeList } from '@/hooks/knowledgeHook';
 import { PlusOutlined } from '@ant-design/icons';
-import { Form, Input, Select, Switch, Upload } from 'antd';
+import { Form, Input, message, Select, Switch, Upload } from 'antd';
 import classNames from 'classnames';
 import { ISegmentedContentProps } from '../interface';
 
-import { useTranslate } from '@/hooks/commonHooks';
+import KnowledgeBaseItem from '@/components/knowledge-base-item';
+import { useTranslate } from '@/hooks/common-hooks';
+import { useFetchTenantInfo } from '@/hooks/user-setting-hooks';
+import { useCallback } from 'react';
 import styles from './index.less';
 
-const AssistantSetting = ({ show }: ISegmentedContentProps) => {
-  const { list: knowledgeList } = useFetchKnowledgeList(true);
-  const knowledgeOptions = knowledgeList.map((x) => ({
-    label: x.name,
-    value: x.id,
-  }));
+const AssistantSetting = ({ show, form }: ISegmentedContentProps) => {
   const { t } = useTranslate('chat');
+  const { data } = useFetchTenantInfo();
 
   const normFile = (e: any) => {
     if (Array.isArray(e)) {
@@ -21,6 +19,24 @@ const AssistantSetting = ({ show }: ISegmentedContentProps) => {
     }
     return e?.fileList;
   };
+
+  const handleTtsChange = useCallback(
+    (checked: boolean) => {
+      if (checked && !data.tts_id) {
+        message.error(`Please set TTS model firstly. 
+        Setting >> Model Providers >> System model settings`);
+        form.setFieldValue(['prompt_config', 'tts'], false);
+      }
+    },
+    [data, form],
+  );
+
+  const uploadButtion = (
+    <button style={{ border: 0, background: 'none' }} type="button">
+      <PlusOutlined />
+      <div style={{ marginTop: 8 }}>{t('upload', { keyPrefix: 'common' })}</div>
+    </button>
+  );
 
   return (
     <section
@@ -44,14 +60,10 @@ const AssistantSetting = ({ show }: ISegmentedContentProps) => {
         <Upload
           listType="picture-card"
           maxCount={1}
+          beforeUpload={() => false}
           showUploadList={{ showPreviewIcon: false, showRemoveIcon: false }}
         >
-          <button style={{ border: 0, background: 'none' }} type="button">
-            <PlusOutlined />
-            <div style={{ marginTop: 8 }}>
-              {t('upload', { keyPrefix: 'common' })}
-            </div>
-          </button>
+          {show ? uploadButtion : null}
         </Upload>
       </Form.Item>
       <Form.Item
@@ -92,24 +104,25 @@ const AssistantSetting = ({ show }: ISegmentedContentProps) => {
       >
         <Switch />
       </Form.Item>
-      <Form.Item
-        label={t('knowledgeBases')}
-        name="kb_ids"
-        tooltip={t('knowledgeBasesTip')}
-        rules={[
-          {
-            required: true,
-            message: t('knowledgeBasesMessage'),
-            type: 'array',
-          },
-        ]}
+      {/* <Form.Item
+        label={t('selfRag')}
+        valuePropName="checked"
+        name={['prompt_config', 'self_rag']}
+        tooltip={t('selfRagTip')}
+        initialValue={false}
       >
-        <Select
-          mode="multiple"
-          options={knowledgeOptions}
-          placeholder={t('knowledgeBasesMessage')}
-        ></Select>
+        <Switch />
+      </Form.Item> */}
+      <Form.Item
+        label={t('tts')}
+        valuePropName="checked"
+        name={['prompt_config', 'tts']}
+        tooltip={t('ttsTip')}
+        initialValue={false}
+      >
+        <Switch onChange={handleTtsChange} />
       </Form.Item>
+      <KnowledgeBaseItem></KnowledgeBaseItem>
     </section>
   );
 };

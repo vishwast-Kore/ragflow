@@ -1,85 +1,33 @@
-import { ReactComponent as AssistantIcon } from '@/assets/svg/assistant.svg';
-import { MessageType } from '@/constants/chat';
-import { useTranslate } from '@/hooks/commonHooks';
-import { Message } from '@/interfaces/database/chat';
-import { Avatar, Button, Flex, Input, Skeleton, Spin } from 'antd';
-import classNames from 'classnames';
-import { useSelectConversationLoading } from '../hooks';
-
-import HightLightMarkdown from '@/components/highlight-markdown';
-import React, { ChangeEventHandler, forwardRef } from 'react';
-import { IClientConversation } from '../interface';
+import MessageInput from '@/components/message-input';
+import MessageItem from '@/components/message-item';
+import { MessageType, SharedFrom } from '@/constants/chat';
+import { useFetchNextSharedConversation } from '@/hooks/chat-hooks';
+import { useSendButtonDisabled } from '@/pages/chat/hooks';
+import { Flex, Spin } from 'antd';
+import { forwardRef } from 'react';
+import {
+  useCreateSharedConversationOnMount,
+  useGetSharedChatSearchParams,
+  useSendSharedMessage,
+} from '../shared-hooks';
+import { buildMessageItemReference } from '../utils';
 import styles from './index.less';
 
-const MessageItem = ({ item }: { item: Message }) => {
-  const isAssistant = item.role === MessageType.Assistant;
+const ChatContainer = () => {
+  const { conversationId } = useCreateSharedConversationOnMount();
+  const { data } = useFetchNextSharedConversation(conversationId);
 
-  return (
-    <div
-      className={classNames(styles.messageItem, {
-        [styles.messageItemLeft]: item.role === MessageType.Assistant,
-        [styles.messageItemRight]: item.role === MessageType.User,
-      })}
-    >
-      <section
-        className={classNames(styles.messageItemSection, {
-          [styles.messageItemSectionLeft]: item.role === MessageType.Assistant,
-          [styles.messageItemSectionRight]: item.role === MessageType.User,
-        })}
-      >
-        <div
-          className={classNames(styles.messageItemContent, {
-            [styles.messageItemContentReverse]: item.role === MessageType.User,
-          })}
-        >
-          {item.role === MessageType.User ? (
-            <Avatar
-              size={40}
-              src={
-                'https://zos.alipayobjects.com/rmsportal/jkjgkEfvpUPVyRjUImniVslZfWPnJuuZ.png'
-              }
-            />
-          ) : (
-            <AssistantIcon></AssistantIcon>
-          )}
-          <Flex vertical gap={8} flex={1}>
-            <b>{isAssistant ? '' : 'You'}</b>
-            <div className={styles.messageText}>
-              {item.content !== '' ? (
-                <HightLightMarkdown>{item.content}</HightLightMarkdown>
-              ) : (
-                <Skeleton active className={styles.messageEmpty} />
-              )}
-            </div>
-          </Flex>
-        </div>
-      </section>
-    </div>
-  );
-};
-
-interface IProps {
-  handlePressEnter(): void;
-  handleInputChange: ChangeEventHandler<HTMLInputElement>;
-  value: string;
-  loading: boolean;
-  sendLoading: boolean;
-  conversation: IClientConversation;
-  ref: React.LegacyRef<any>;
-}
-
-const ChatContainer = (
-  {
+  const {
     handlePressEnter,
     handleInputChange,
     value,
-    loading: sendLoading,
-    conversation,
-  }: IProps,
-  ref: React.LegacyRef<any>,
-) => {
-  const loading = useSelectConversationLoading();
-  const { t } = useTranslate('chat');
+    sendLoading,
+    loading,
+    ref,
+    derivedMessages,
+  } = useSendSharedMessage(conversationId);
+  const sendDisabled = useSendButtonDisabled(value);
+  const { from } = useGetSharedChatSearchParams();
 
   return (
     <>
@@ -87,33 +35,45 @@ const ChatContainer = (
         <Flex flex={1} vertical className={styles.messageContainer}>
           <div>
             <Spin spinning={loading}>
-              {conversation?.message?.map((message) => {
+              {derivedMessages?.map((message, i) => {
                 return (
-                  <MessageItem key={message.id} item={message}></MessageItem>
+                  <MessageItem
+                    key={message.id}
+                    item={message}
+                    nickname="You"
+                    reference={buildMessageItemReference(
+                      {
+                        message: derivedMessages,
+                        reference: data?.data?.reference,
+                      },
+                      message,
+                    )}
+                    loading={
+                      message.role === MessageType.Assistant &&
+                      sendLoading &&
+                      derivedMessages?.length - 1 === i
+                    }
+                    index={i}
+                  ></MessageItem>
                 );
               })}
             </Spin>
           </div>
           <div ref={ref} />
         </Flex>
-        <Input
-          size="large"
-          placeholder={t('sendPlaceholder')}
+
+        <MessageInput
+          isShared
           value={value}
-          //   disabled={disabled}
-          suffix={
-            <Button
-              type="primary"
-              onClick={handlePressEnter}
-              loading={sendLoading}
-              //   disabled={disabled}
-            >
-              {t('send')}
-            </Button>
-          }
+          disabled={false}
+          sendDisabled={sendDisabled}
+          conversationId={conversationId}
+          onInputChange={handleInputChange}
           onPressEnter={handlePressEnter}
-          onChange={handleInputChange}
-        />
+          sendLoading={sendLoading}
+          uploadMethod="external_upload_and_parse"
+          showUploadIcon={from === SharedFrom.Chat}
+        ></MessageInput>
       </Flex>
     </>
   );

@@ -7,7 +7,8 @@
 <p align="center">
   <a href="./README.md">English</a> |
   <a href="./README_zh.md">简体中文</a> |
-  <a href="./README_ja.md">日本語</a>
+  <a href="./README_ja.md">日本語</a> |
+  <a href="./README_ko.md">한국어</a>
 </p>
 
 <p align="center">
@@ -15,18 +16,47 @@
         <img src="https://img.shields.io/github/v/release/infiniflow/ragflow?color=blue&label=Latest%20Release" alt="Latest Release">
     </a>
     <a href="https://demo.ragflow.io" target="_blank">
-        <img alt="Static Badge" src="https://img.shields.io/badge/RAGFLOW-LLM-white?&labelColor=dd0af7"></a>
+        <img alt="Static Badge" src="https://img.shields.io/badge/Online-Demo-4e6b99"></a>
     <a href="https://hub.docker.com/r/infiniflow/ragflow" target="_blank">
-        <img src="https://img.shields.io/badge/docker_pull-ragflow:v0.4.0-brightgreen"
-            alt="docker pull infiniflow/ragflow:v0.4.0"></a>
+        <img src="https://img.shields.io/badge/docker_pull-ragflow:v0.11.0-brightgreen"
+            alt="docker pull infiniflow/ragflow:v0.11.0"></a>
       <a href="https://github.com/infiniflow/ragflow/blob/main/LICENSE">
-    <img height="21" src="https://img.shields.io/badge/License-Apache--2.0-ffffff?style=flat-square&labelColor=d4eaf7&color=7d09f1" alt="license">
+    <img height="21" src="https://img.shields.io/badge/License-Apache--2.0-ffffff?labelColor=d4eaf7&color=2e6cc4" alt="license">
   </a>
 </p>
 
+<h4 align="center">
+  <a href="https://ragflow.io/docs/dev/">Document</a> |
+  <a href="https://github.com/infiniflow/ragflow/issues/162">Roadmap</a> |
+  <a href="https://twitter.com/infiniflowai">Twitter</a> |
+  <a href="https://discord.gg/4XxujFgUN7">Discord</a> |
+  <a href="https://demo.ragflow.io">Demo</a>
+</h4>
+
 ## 💡 RAGFlow とは？
 
-[RAGFlow](https://demo.ragflow.io) は、深い文書理解に基づいたオープンソースの RAG (Retrieval-Augmented Generation) エンジンである。LLM（大規模言語モデル）を組み合わせることで、様々な複雑なフォーマットのデータから根拠のある引用に裏打ちされた、信頼できる質問応答機能を実現し、あらゆる規模のビジネスに適した RAG ワークフローを提供します。
+[RAGFlow](https://ragflow.io/) は、深い文書理解に基づいたオープンソースの RAG (Retrieval-Augmented Generation) エンジンである。LLM（大規模言語モデル）を組み合わせることで、様々な複雑なフォーマットのデータから根拠のある引用に裏打ちされた、信頼できる質問応答機能を実現し、あらゆる規模のビジネスに適した RAG ワークフローを提供します。
+
+## 🎮 Demo
+
+デモをお試しください：[https://demo.ragflow.io](https://demo.ragflow.io)。
+<div align="center" style="margin-top:20px;margin-bottom:20px;">
+<img src="https://github.com/infiniflow/ragflow/assets/7248/2f6baa3e-1092-4f11-866d-36f6a9d075e5" width="1200"/>
+<img src="https://github.com/infiniflow/ragflow/assets/12318111/b083d173-dadc-4ea9-bdeb-180d7df514eb" width="1200"/>
+</div>
+
+
+## 🔥 最新情報
+
+- 2024-09-13 ナレッジベース Q&A の検索モードを追加しました。
+- 2024-09-09 エージェントに医療相談テンプレートを追加しました。
+- 2024-08-22 RAG を介して SQL ステートメントへのテキストをサポートします。
+- 2024-08-02 [graphrag](https://github.com/microsoft/graphrag) からインスピレーションを得た GraphRAG とマインド マップをサポートします。
+- 2024-07-23 音声ファイルの解析をサポートしました。
+- 2024-07-08 [Graph](./agent/README.md) ベースのワークフローをサポート
+- 2024-06-27 Q&A 解析メソッドで Markdown と Docx をサポートし、Docx ファイルから画像を抽出し、Markdown ファイルからテーブルを抽出します。
+- 2024-05-23 より良いテキスト検索のために [RAPTOR](https://arxiv.org/html/2401.18059v1) をサポート。
+
 
 ## 🌟 主な特徴
 
@@ -56,17 +86,6 @@
 - 複数の想起と融合された再ランク付け。
 - 直感的な API によってビジネスとの統合がシームレスに。
 
-## 📌 最新の機能
-
-- 2024-04-26 「ファイル管理」機能を追加しました。
-- 2024-04-19 会話 API をサポートします ([詳細](./docs/conversation_api.md))。
-- 2024-04-16 [BCEmbedding](https://github.com/netease-youdao/BCEmbedding) から埋め込みモデル「bce-embedding-base_v1」を追加します。
-- 2024-04-16 [FastEmbed](https://github.com/qdrant/fastembed) は、軽量かつ高速な埋め込み用に設計されています。
-- 2024-04-11 ローカル LLM デプロイメント用に [Xinference](./docs/xinference.md) をサポートします。
-- 2024-04-10 メソッド「Laws」に新しいレイアウト認識モデルを追加します。
-- 2024-04-08 [Ollama](./docs/ollama.md) を使用した大規模モデルのローカライズされたデプロイメントをサポートします。
-- 2024-04-07 中国語インターフェースをサポートします。
-
 ## 🔎 システム構成
 
 <div align="center" style="margin-top:20px;margin-bottom:20px;">
@@ -85,7 +104,7 @@
 
 ### 🚀 サーバーを起動
 
-1. `vm.max_map_count` >= 262144 であることを確認する【[もっと](./docs/max_map_count.md)】:
+1. `vm.max_map_count` >= 262144 であることを確認する:
 
    > `vm.max_map_count` の値をチェックするには:
    >
@@ -120,7 +139,9 @@
    $ docker compose up -d
    ```
 
-   > コアイメージのサイズは約 15 GB で、ロードに時間がかかる場合があります。
+   > 上記のコマンドを実行すると、RAGFlowの開発版dockerイメージが自動的にダウンロードされます。 特定のバージョンのDockerイメージをダウンロードして実行したい場合は、docker/.envファイルのRAGFLOW_VERSION変数を見つけて、対応するバージョンに変更してください。 例えば、RAGFLOW_VERSION=v0.11.0として、上記のコマンドを実行してください。
+
+   > コアイメージのサイズは約 9 GB で、ロードに時間がかかる場合があります。
 
 4. サーバーを立ち上げた後、サーバーの状態を確認する:
 
@@ -149,7 +170,7 @@
    > デフォルトの設定を使用する場合、デフォルトの HTTP サービングポート `80` は省略できるので、与えられたシナリオでは、`http://IP_OF_YOUR_MACHINE`（ポート番号は省略）だけを入力すればよい。
 6. [service_conf.yaml](./docker/service_conf.yaml) で、`user_default_llm` で希望の LLM ファクトリを選択し、`API_KEY` フィールドを対応する API キーで更新する。
 
-   > 詳しくは [./docs/llm_api_key_setup.md](./docs/llm_api_key_setup.md) を参照してください。
+   > 詳しくは [llm_api_key_setup](https://ragflow.io/docs/dev/llm_api_key_setup) を参照してください。
 
    _これで初期設定完了！ショーの開幕です！_
 
@@ -180,7 +201,7 @@
 ```bash
 $ git clone https://github.com/infiniflow/ragflow.git
 $ cd ragflow/
-$ docker build -t infiniflow/ragflow:v0.4.0 .
+$ docker build -t infiniflow/ragflow:v0.11.0 .
 $ cd ragflow/docker
 $ chmod +x ./entrypoint.sh
 $ docker compose up -d
@@ -213,21 +234,21 @@ $ pip install onnxruntime-gpu --extra-index-url https://aiinfra.pkgs.visualstudi
 $ cp docker/entrypoint.sh .
 $ vi entrypoint.sh
 ```
-以下のコマンドでPythonのパスとragflowプロジェクトのパスを取得します：
+以下のコマンドで Python のパスとragflowプロジェクトのパスを取得します：
 ```bash
 $ which python
 $ pwd
 ```
 
-`which python`の出力を`PY`の値として、`pwd`の出力を`PYTHONPATH`の値として設定します。
+`which python` の出力を `PY` の値として、`pwd` の出力を `PYTHONPATH` の値として設定します。
 
-`LD_LIBRARY_PATH`が既に設定されている場合は、コメントアウトできます。
+`LD_LIBRARY_PATH` が既に設定されている場合は、コメントアウトできます。
 
 ```bash
-# 実際の状況に応じて設定を調整してください。以下の二つのexportは新たに追加された設定です
+# 実際の状況に応じて設定を調整してください。以下の二つの export は新たに追加された設定です
 PY=${PY}
 export PYTHONPATH=${PYTHONPATH}
-# オプション：Hugging Faceミラーを追加
+# オプション：Hugging Face ミラーを追加
 export HF_ENDPOINT=https://hf-mirror.com
 ```
 
@@ -238,7 +259,7 @@ $ docker compose -f docker-compose-base.yml up -d
 ```
 
 5. 設定ファイルを確認します
-**docker/.env**内の設定が**conf/service_conf.yaml**内の設定と一致していることを確認してください。**service_conf.yaml**内の関連サービスのIPアドレスとポートは、ローカルマシンのIPアドレスとコンテナが公開するポートに変更する必要があります。
+**docker/.env** 内の設定が**conf/service_conf.yaml**内の設定と一致していることを確認してください。**service_conf.yaml**内の関連サービスのIPアドレスとポートは、ローカルマシンのIPアドレスとコンテナが公開するポートに変更する必要があります。
 
 6. サービスを起動します
 ```bash
@@ -248,7 +269,10 @@ $ bash ./entrypoint.sh
 
 ## 📚 ドキュメンテーション
 
-- [FAQ](./docs/faq.md)
+- [Quickstart](https://ragflow.io/docs/dev/)
+- [User guide](https://ragflow.io/docs/dev/category/user-guides)
+- [References](https://ragflow.io/docs/dev/category/references)
+- [FAQ](https://ragflow.io/docs/dev/faq)
 
 ## 📜 ロードマップ
 
@@ -258,7 +282,8 @@ $ bash ./entrypoint.sh
 
 - [Discord](https://discord.gg/4XxujFgUN7)
 - [Twitter](https://twitter.com/infiniflowai)
+- [GitHub Discussions](https://github.com/orgs/infiniflow/discussions)
 
 ## 🙌 コントリビュート
 
-RAGFlow はオープンソースのコラボレーションによって発展してきました。この精神に基づき、私たちはコミュニティからの多様なコントリビュートを受け入れています。 参加を希望される方は、まず[コントリビューションガイド](https://github.com/infiniflow/ragflow/blob/main/docs/CONTRIBUTING.md)をご覧ください。
+RAGFlow はオープンソースのコラボレーションによって発展してきました。この精神に基づき、私たちはコミュニティからの多様なコントリビュートを受け入れています。 参加を希望される方は、まず [コントリビューションガイド](./docs/references/CONTRIBUTING.md)をご覧ください。

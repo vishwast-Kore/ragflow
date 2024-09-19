@@ -28,6 +28,8 @@ class ESConnection:
             try:
                 self.es = Elasticsearch(
                     settings.ES["hosts"].split(","),
+                    basic_auth=(settings.ES["username"], settings.ES["password"]) if "username" in settings.ES and "password" in settings.ES else None,
+                    verify_certs=False,
                     timeout=600
                 )
                 if self.es:
@@ -42,6 +44,9 @@ class ESConnection:
         v = self.info.get("version", {"number": "5.6"})
         v = v["number"].split(".")[0]
         return int(v) >= 7
+
+    def health(self):
+        return dict(self.es.cluster.health())
 
     def upsert(self, df, idxnm=""):
         res = []

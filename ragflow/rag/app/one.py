@@ -15,12 +15,12 @@ from io import BytesIO
 import re
 from rag.app import laws
 from rag.nlp import rag_tokenizer, tokenize, find_codec
-from deepdoc.parser import PdfParser, ExcelParser, PlainParser
+from deepdoc.parser import PdfParser, ExcelParser, PlainParser, HtmlParser
 
 
 class Pdf(PdfParser):
     def __call__(self, filename, binary=None, from_page=0,
-                 to_page=100000, zoomin=3, callback=None,extract_table_html=True):
+                 to_page=100000, zoomin=3, callback=None):
         callback(msg="OCR is running...")
         self.__images__(
             filename if not binary else binary,
@@ -40,14 +40,13 @@ class Pdf(PdfParser):
         callback(0.65, "Table analysis finished.")
         self._text_merge()
         callback(0.67, "Text merging finished")
-        tbls = self._extract_table_figure(True, zoomin, extract_table_html, True)
+        tbls = self._extract_table_figure(True, zoomin, True, True)
         self._concat_downward()
 
         sections = [(b["text"], self.get_position(b, zoomin))
                     for i, b in enumerate(self.boxes)]
-        for (img, type, rows), poss in tbls:
+        for (img, rows), poss in tbls:
             if not rows:continue
-            #not adding type as everything is combined later
             sections.append((rows if isinstance(rows, str) else rows[0],
                              [(p[0] + 1 - from_page, p[1], p[2], p[3], p[4]) for p in poss]))
         return [(txt, "") for txt, _ in sorted(sections, key=lambda x: (
@@ -63,48 +62,54 @@ def chunk(filename, binary=None, from_page=0, to_page=100000,
 
     eng = lang.lower() == "english"  # is_english(cks)
 
-    if kwargs.get("sys_file_type") == "docx":
+    if re.search(r"\.docx$", filename, re.IGNORECASE):
         callback(0.1, "Start to parse.")
         sections = [txt for txt in laws.Docx()(filename, binary) if txt]
         callback(0.8, "Finish parsing.")
 
-    elif kwargs.get("sys_file_type") == "pdf":
+    elif re.search(r"\.pdf$", filename, re.IGNORECASE):
         pdf_parser = Pdf() if kwargs.get(
             "parser_config", {}).get(
             "layout_recognize", True) else PlainParser()
         sections, _ = pdf_parser(
-            filename if not binary else binary, to_page=to_page, callback=callback,extract_table_html=kwargs.get('extract_table_html',True))
+            filename if not binary else binary, to_page=to_page, callback=callback)
         sections = [s for s, _ in sections if s]
 
-    # elif re.search(r"\.xlsx?$", filename, re.IGNORECASE):
-    #     callback(0.1, "Start to parse.")
-    #     excel_parser = ExcelParser()
-    #     sections = [excel_parser.html(binary)]
-    #
-    # elif re.search(r"\.txt$", filename, re.IGNORECASE):
-    #     callback(0.1, "Start to parse.")
-    #     txt = ""
-    #     if binary:
-    #         encoding = find_codec(binary)
-    #         txt = binary.decode(encoding)
-    #     else:
-    #         with open(filename, "r") as f:
-    #             while True:
-    #                 l = f.readline()
-    #                 if not l:
-    #                     break
-    #                 txt += l
-    #     sections = txt.split("\n")
-    #     sections = [s for s in sections if s]
-    #     callback(0.8, "Finish parsing.")
-    #
-    # elif re.search(r"\.doc$", filename, re.IGNORECASE):
-    #     callback(0.1, "Start to parse.")
-    #     binary = BytesIO(binary)
-    #     doc_parsed = parser.from_buffer(binary)
-    #     sections = doc_parsed['content'].split('\n')
-    #     sections = [l for l in sections if l]
-    #     callback(0.8, "Finish parsing.")
+    elif re.search(r"\.xlsx?$", filename, re.IGNORECASE):
+        callback(0.1, "Start to parse.")
+        excel_parser = ExcelParser()
+        sections = excel_parser.html(binary, 1000000000)
+
+    elif re.search(r"\.(txt|md|markdown)$", filename, re.IGNORECASE):
+        callback(0.1, "Start to parse.")
+        txt = ""
+        if binary:
+            encoding = find_codec(binary)
+            txt = binary.decode(encoding, errors="ignore")
+        else:
+            with open(filename, "r") as f:
+                while True:
+                    l = f.readline()
+                    if not l:
+                        break
+                    txt += l
+        sections = txt.split("\n")
+        sections = [s for s in sections if s]
+        callback(0.8, "Finish parsing.")
+
+    elif re.search(r"\.(htm|html)$", filename, re.IGNORECASE):
+        callback(0.1, "Start to parse.")
+        sections = HtmlParser()(filename, binary)
+        sections = [s for s in sections if s]
+        callback(0.8, "Finish parsing.")
+
+    elif re.search(r"\.doc$", filename, re.IGNORECASE):
+        callback(0.1, "Start to parse.")
+        binary = BytesIO(binary)
+        doc_parsed = parser.from_buffer(binary)
+        sections = doc_parsed['content'].split('\n')
+        sections = [l for l in sections if l]
+        callback(0.8, "Finish parsing.")
 
     else:
         raise NotImplementedError(
@@ -112,8 +117,7 @@ def chunk(filename, binary=None, from_page=0, to_page=100000,
 
     doc = {
         "docnm_kwd": filename,
-        "title_tks": rag_tokenizer.tokenize(re.sub(r"\.[a-zA-Z]+$", "", filename)),
-        "type": "text"
+        "title_tks": rag_tokenizer.tokenize(re.sub(r"\.[a-zA-Z]+$", "", filename))
     }
     doc["title_sm_tks"] = rag_tokenizer.fine_grained_tokenize(doc["title_tks"])
     tokenize(doc, "\n".join(sections), eng)
@@ -125,9 +129,5 @@ if __name__ == "__main__":
 
     def dummy(prog=None, msg=""):
         pass
-    kwargs = {"sys_file_type": "pdf"}
-
-    result = chunk('/home/vishwastak/Downloads/Apple.pdf', callback=dummy, **kwargs)
-    # result = chunk('/home/vishwastak/Downloads/Document AI Market Research.docx', callback=dummy, **kwargs)
 
     chunk(sys.argv[1], from_page=0, to_page=10, callback=dummy)
