@@ -1,16 +1,17 @@
-import { useSecondPathName } from '@/hooks/routeHook';
+import { Domain } from '@/constants/common';
+import { useTranslate } from '@/hooks/common-hooks';
+import { useLogout } from '@/hooks/login-hooks';
+import { useSecondPathName } from '@/hooks/route-hook';
+import { useFetchSystemVersion } from '@/hooks/user-setting-hooks';
 import type { MenuProps } from 'antd';
-import { Menu } from 'antd';
-import React, { useMemo } from 'react';
+import { Flex, Menu } from 'antd';
+import React, { useEffect, useMemo } from 'react';
 import { useNavigate } from 'umi';
 import {
   UserSettingBaseKey,
   UserSettingIconMap,
   UserSettingRouteKey,
 } from '../constants';
-
-import { useTranslate } from '@/hooks/commonHooks';
-import { useLogout } from '@/hooks/userSettingHook';
 import styles from './index.less';
 
 type MenuItem = Required<MenuProps>['items'][number];
@@ -18,8 +19,15 @@ type MenuItem = Required<MenuProps>['items'][number];
 const SideBar = () => {
   const navigate = useNavigate();
   const pathName = useSecondPathName();
-  const logout = useLogout();
+  const { logout } = useLogout();
   const { t } = useTranslate('setting');
+  const { version, fetchSystemVersion } = useFetchSystemVersion();
+
+  useEffect(() => {
+    if (location.host !== Domain) {
+      fetchSystemVersion();
+    }
+  }, [fetchSystemVersion]);
 
   function getItem(
     label: string,
@@ -32,7 +40,14 @@ const SideBar = () => {
       key,
       icon,
       children,
-      label: t(label),
+      label: (
+        <Flex justify={'space-between'}>
+          {t(label)}
+          <span className={styles.version}>
+            {label === 'system' && version}
+          </span>
+        </Flex>
+      ),
       type,
     } as MenuItem;
   }

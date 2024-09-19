@@ -1,15 +1,15 @@
+import Rerank from '@/components/rerank';
 import SimilaritySlider from '@/components/similarity-slider';
-import { Button, Card, Divider, Flex, Form, Input, Slider } from 'antd';
+import { useTranslate } from '@/hooks/common-hooks';
+import { Button, Card, Divider, Flex, Form, Input } from 'antd';
 import { FormInstance } from 'antd/lib';
 
-import { useTranslate } from '@/hooks/commonHooks';
-import { useOneNamespaceEffectsLoading } from '@/hooks/storeHooks';
+import { useChunkIsTesting } from '@/hooks/knowledge-hooks';
 import styles from './index.less';
 
 type FieldType = {
   similarity_threshold?: number;
   vector_similarity_weight?: number;
-  top_k?: number;
   question: string;
 };
 
@@ -20,9 +20,7 @@ interface IProps {
 
 const TestingControl = ({ form, handleTesting }: IProps) => {
   const question = Form.useWatch('question', { form, preserve: true });
-  const loading = useOneNamespaceEffectsLoading('testingModel', [
-    'testDocumentChunk',
-  ]);
+  const loading = useChunkIsTesting();
   const { t } = useTranslate('knowledgeDetails');
 
   const buttonDisabled =
@@ -36,22 +34,9 @@ const TestingControl = ({ form, handleTesting }: IProps) => {
       <p>{t('testingDescription')}</p>
       <Divider></Divider>
       <section>
-        <Form
-          name="testing"
-          layout="vertical"
-          form={form}
-          initialValues={{
-            top_k: 1024,
-          }}
-        >
+        <Form name="testing" layout="vertical" form={form}>
           <SimilaritySlider isTooltipShown></SimilaritySlider>
-          <Form.Item<FieldType>
-            label="Top K"
-            name={'top_k'}
-            tooltip={t('topKTip')}
-          >
-            <Slider marks={{ 0: 0, 2048: 2048 }} max={2048} />
-          </Form.Item>
+          <Rerank></Rerank>
           <Card size="small" title={t('testText')}>
             <Form.Item<FieldType>
               name={'question'}

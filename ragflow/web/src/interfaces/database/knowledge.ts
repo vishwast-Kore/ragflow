@@ -21,6 +21,7 @@ export interface IKnowledge {
   update_date: string;
   update_time: number;
   vector_similarity_weight: number;
+  embd_id: string;
 }
 
 export interface Parserconfig {
@@ -71,6 +72,7 @@ export interface ITenantInfo {
   tenant_id: string;
   chat_id: string;
   speech2text_id: string;
+  tts_id: string;
 }
 
 export interface IChunk {
@@ -78,7 +80,7 @@ export interface IChunk {
   chunk_id: string;
   content_with_weight: string;
   doc_id: string;
-  docnm_kwd: string;
+  doc_name: string;
   img_id: string;
   important_kwd: any[];
   positions: number[][];
@@ -89,7 +91,7 @@ export interface ITestingChunk {
   content_ltks: string;
   content_with_weight: string;
   doc_id: string;
-  docnm_kwd: string;
+  doc_name: string;
   img_id: string;
   important_kwd: any[];
   kb_id: string;
@@ -97,6 +99,9 @@ export interface ITestingChunk {
   term_similarity: number;
   vector: number[];
   vector_similarity: number;
+  highlight: string;
+  positions: number[][];
+  docnm_kwd: string;
 }
 
 export interface ITestingDocument {
@@ -107,6 +112,6 @@ export interface ITestingDocument {
 
 export interface ITestingResult {
   chunks: ITestingChunk[];
-  doc_aggs: Record<string, number>;
+  documents: ITestingDocument[];
   total: number;
 }

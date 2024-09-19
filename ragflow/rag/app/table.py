@@ -19,7 +19,7 @@ import pandas as pd
 from openpyxl import load_workbook
 from dateutil.parser import parse as datetime_parse
 
-# from api.db.services.knowledgebase_service import KnowledgebaseService
+from api.db.services.knowledgebase_service import KnowledgebaseService
 from rag.nlp import rag_tokenizer, is_english, tokenize, find_codec
 from deepdoc.parser import ExcelParser
 
@@ -149,7 +149,7 @@ def chunk(filename, binary=None, from_page=0, to_page=10000000000,
         txt = ""
         if binary:
             encoding = find_codec(binary)
-            txt = binary.decode(encoding)
+            txt = binary.decode(encoding, errors="ignore")
         else:
             with open(filename, "r") as f:
                 while True:
@@ -236,8 +236,8 @@ def chunk(filename, binary=None, from_page=0, to_page=10000000000,
             tokenize(d, "; ".join(row_txt), eng)
             res.append(d)
 
-        # KnowledgebaseService.update_parser_config(
-        #     kwargs["kb_id"], {"field_map": {k: v for k, v in clmns_map}})
+        KnowledgebaseService.update_parser_config(
+            kwargs["kb_id"], {"field_map": {k: v for k, v in clmns_map}})
     callback(0.35, "")
 
     return res

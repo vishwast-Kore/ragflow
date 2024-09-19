@@ -31,14 +31,14 @@ export const settledModelVariableMap = {
     top_p: 0.3,
     frequency_penalty: 0.7,
     presence_penalty: 0.4,
-    max_tokens: 215,
+    max_tokens: 512,
   },
   [ModelVariableType.Balance]: {
     temperature: 0.5,
     top_p: 0.5,
     frequency_penalty: 0.7,
     presence_penalty: 0.4,
-    max_tokens: 215,
+    max_tokens: 512,
   },
 };
 
@@ -47,6 +47,8 @@ export enum LlmModelType {
   Chat = 'chat',
   Image2text = 'image2text',
   Speech2text = 'speech2text',
+  Rerank = 'rerank',
+  TTS = 'tts',
 }
 
 export enum KnowledgeSearchParams {

@@ -1,10 +1,11 @@
-import { ReactComponent as StarIon } from '@/assets/svg/chat-star.svg';
 import { ReactComponent as FileIcon } from '@/assets/svg/file-management.svg';
+import { ReactComponent as GraphIcon } from '@/assets/svg/graph.svg';
 import { ReactComponent as KnowledgeBaseIcon } from '@/assets/svg/knowledge-base.svg';
-import { ReactComponent as Logo } from '@/assets/svg/logo.svg';
-import { useTranslate } from '@/hooks/commonHooks';
-import { useNavigateWithFromState } from '@/hooks/routeHook';
-import { Layout, Radio, Space, theme } from 'antd';
+import { useTranslate } from '@/hooks/common-hooks';
+import { useFetchAppConf } from '@/hooks/logic-hooks';
+import { useNavigateWithFromState } from '@/hooks/route-hook';
+import { MessageOutlined, SearchOutlined } from '@ant-design/icons';
+import { Flex, Layout, Radio, Space, theme } from 'antd';
 import { useCallback, useMemo } from 'react';
 import { useLocation } from 'umi';
 import Toolbar from '../right-toolbar';
@@ -20,11 +21,14 @@ const RagHeader = () => {
   const navigate = useNavigateWithFromState();
   const { pathname } = useLocation();
   const { t } = useTranslate('header');
+  const appConf = useFetchAppConf();
 
   const tagsData = useMemo(
     () => [
       { path: '/knowledge', name: t('knowledgeBase'), icon: KnowledgeBaseIcon },
-      { path: '/chat', name: t('chat'), icon: StarIon },
+      { path: '/chat', name: t('chat'), icon: MessageOutlined },
+      { path: '/search', name: t('search'), icon: SearchOutlined },
+      { path: '/flow', name: t('flow'), icon: GraphIcon },
       { path: '/file', name: t('fileManager'), icon: FileIcon },
     ],
     [t],
@@ -56,8 +60,8 @@ const RagHeader = () => {
       }}
     >
       <Space size={12} onClick={handleLogoClick} className={styles.logoWrapper}>
-        <Logo className={styles.appIcon}></Logo>
-        <span className={styles.appName}>RAGFlow</span>
+        <img src="/logo.svg" alt="" className={styles.appIcon} />
+        <span className={styles.appName}>{appConf.appName}</span>
       </Space>
       <Space size={[0, 8]} wrap>
         <Radio.Group
@@ -72,13 +76,13 @@ const RagHeader = () => {
               onClick={() => handleChange(item.path)}
               key={item.name}
             >
-              <Space>
+              <Flex align="center" gap={8}>
                 <item.icon
                   className={styles.radioButtonIcon}
                   stroke={item.name === currentPath ? 'black' : 'white'}
                 ></item.icon>
                 {item.name}
-              </Space>
+              </Flex>
             </Radio.Button>
           ))}
         </Radio.Group>

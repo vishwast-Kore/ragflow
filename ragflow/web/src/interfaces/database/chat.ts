@@ -6,6 +6,7 @@ export interface PromptConfig {
   parameters: Parameter[];
   prologue: string;
   system: string;
+  tts?: boolean;
 }
 
 export interface Parameter {
@@ -34,6 +35,7 @@ export interface IDialog {
   description: string;
   icon: string;
   id: string;
+  dialog_id?: string;
   kb_ids: string[];
   kb_names: string[];
   language: string;
@@ -47,6 +49,8 @@ export interface IDialog {
   tenant_id: string;
   update_date: string;
   update_time: number;
+  vector_similarity_weight: number;
+  similarity_threshold: number;
 }
 
 export interface IConversation {
@@ -64,12 +68,25 @@ export interface IConversation {
 export interface Message {
   content: string;
   role: MessageType;
+  doc_ids?: string[];
+  prompt?: string;
+  id?: string;
+  audio_binary?: string;
 }
 
 export interface IReference {
   chunks: IChunk[];
   doc_aggs: Docagg[];
   total: number;
+}
+
+export interface IAnswer {
+  answer: string;
+  reference: IReference;
+  conversationId?: string;
+  prompt?: string;
+  id?: string;
+  audio_binary?: string;
 }
 
 export interface Docagg {

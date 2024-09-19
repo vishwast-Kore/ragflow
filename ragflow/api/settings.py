@@ -34,6 +34,7 @@ chat_logger = getLogger("chat")
 
 from rag.utils.es_conn import ELASTICSEARCH
 from rag.nlp import search
+from graphrag import search as kg_search
 from api.utils import get_base_config, decrypt_database_config
 
 API_VERSION = "v1"
@@ -69,6 +70,12 @@ default_llm = {
         "image2text_model": "gpt-4-vision-preview",
         "asr_model": "whisper-1",
     },
+    "Azure-OpenAI": {
+        "chat_model": "azure-gpt-35-turbo",
+        "embedding_model": "azure-text-embedding-ada-002",
+        "image2text_model": "azure-gpt-4-vision-preview",
+        "asr_model": "azure-whisper-1",
+    },
     "ZHIPU-AI": {
         "chat_model": "glm-3-turbo",
         "embedding_model": "embedding-2",
@@ -86,6 +93,25 @@ default_llm = {
         "embedding_model": "",
         "image2text_model": "",
         "asr_model": "",
+    },
+    "DeepSeek": {
+        "chat_model": "deepseek-chat",
+        "embedding_model": "",
+        "image2text_model": "",
+        "asr_model": "",
+    },
+    "VolcEngine": {
+        "chat_model": "",
+        "embedding_model": "",
+        "image2text_model": "",
+        "asr_model": "",
+    },
+    "BAAI": {
+        "chat_model": "",
+        "embedding_model": "BAAI/bge-large-zh-v1.5",
+        "image2text_model": "",
+        "asr_model": "",
+        "rerank_model": "BAAI/bge-reranker-v2-m3",
     }
 }
 LLM = get_base_config("user_default_llm", {})
@@ -98,14 +124,15 @@ if LLM_FACTORY not in default_llm:
         f"LLM factory {LLM_FACTORY} has not supported yet, switch to 'Tongyi-Qianwen/QWen' automatically, and please check the API_KEY in service_conf.yaml.")
     LLM_FACTORY = "Tongyi-Qianwen"
 CHAT_MDL = default_llm[LLM_FACTORY]["chat_model"]
-EMBEDDING_MDL = default_llm[LLM_FACTORY]["embedding_model"]
+EMBEDDING_MDL = default_llm["BAAI"]["embedding_model"]
+RERANK_MDL = default_llm["BAAI"]["rerank_model"]
 ASR_MDL = default_llm[LLM_FACTORY]["asr_model"]
 IMAGE2TEXT_MDL = default_llm[LLM_FACTORY]["image2text_model"]
 
 API_KEY = LLM.get("api_key", "")
 PARSERS = LLM.get(
     "parsers",
-    "naive:General,qa:Q&A,resume:Resume,manual:Manual,table:Table,paper:Paper,book:Book,laws:Laws,presentation:Presentation,picture:Picture,one:One")
+    "naive:General,qa:Q&A,resume:Resume,manual:Manual,table:Table,paper:Paper,book:Book,laws:Laws,presentation:Presentation,picture:Picture,one:One,audio:Audio,knowledge_graph:Knowledge Graph,email:Email")
 
 # distribution
 DEPENDENT_DISTRIBUTION = get_base_config("dependent_distribution", False)
@@ -137,7 +164,8 @@ RANDOM_INSTANCE_ID = get_base_config(
 PROXY = get_base_config(RAG_FLOW_SERVICE_NAME, {}).get("proxy")
 PROXY_PROTOCOL = get_base_config(RAG_FLOW_SERVICE_NAME, {}).get("protocol")
 
-DATABASE = decrypt_database_config(name="mysql")
+DATABASE_TYPE = os.getenv("DB_TYPE", 'mysql')
+DATABASE = decrypt_database_config(name=DATABASE_TYPE)
 
 # Switch
 # upload
@@ -152,6 +180,7 @@ CLIENT_AUTHENTICATION = AUTHENTICATION_CONF.get(
         "switch", False)
 HTTP_APP_KEY = AUTHENTICATION_CONF.get("client", {}).get("http_app_key")
 GITHUB_OAUTH = get_base_config("oauth", {}).get("github")
+FEISHU_OAUTH = get_base_config("oauth", {}).get("feishu")
 WECHAT_OAUTH = get_base_config("oauth", {}).get("wechat")
 
 # site
@@ -177,6 +206,7 @@ PRIVILEGE_COMMAND_WHITELIST = []
 CHECK_NODES_IDENTITY = False
 
 retrievaler = search.Dealer(ELASTICSEARCH)
+kg_retrievaler = kg_search.KGSearch(ELASTICSEARCH)
 
 
 class CustomEnum(Enum):
@@ -218,4 +248,5 @@ class RetCode(IntEnum, CustomEnum):
     RUNNING = 106
     PERMISSION_ERROR = 108
     AUTHENTICATION_ERROR = 109
+    UNAUTHORIZED = 401
     SERVER_ERROR = 500

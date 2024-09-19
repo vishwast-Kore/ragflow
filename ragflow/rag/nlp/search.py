@@ -1,4 +1,19 @@
-# -*- coding: utf-8 -*-
+#
+#  Copyright 2024 The InfiniFlow Authors. All Rights Reserved.
+#
+#  Licensed under the Apache License, Version 2.0 (the "License");
+#  you may not use this file except in compliance with the License.
+#  You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+#  Unless required by applicable law or agreed to in writing, software
+#  distributed under the License is distributed on an "AS IS" BASIS,
+#  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#  See the License for the specific language governing permissions and
+#  limitations under the License.
+#
+
 import json
 import re
 from copy import deepcopy
@@ -9,7 +24,7 @@ from dataclasses import dataclass
 
 from rag.settings import es_logger
 from rag.utils import rmSpace
-from rag.nlp import rag_tokenizer, query
+from rag.nlp import rag_tokenizer, query, is_english
 import numpy as np
 
 
@@ -49,27 +64,33 @@ class Dealer:
             "query_vector": [float(v) for v in qv]
         }
 
-    def search(self, req, idxnm, emb_mdl=None):
-        qst = req.get("question", "")
-        bqry, keywords = self.qryr.question(qst)
+    def _add_filters(self, bqry, req):
         if req.get("kb_ids"):
             bqry.filter.append(Q("terms", kb_id=req["kb_ids"]))
         if req.get("doc_ids"):
             bqry.filter.append(Q("terms", doc_id=req["doc_ids"]))
+        if req.get("knowledge_graph_kwd"):
+            bqry.filter.append(Q("terms", knowledge_graph_kwd=req["knowledge_graph_kwd"]))
         if "available_int" in req:
             if req["available_int"] == 0:
                 bqry.filter.append(Q("range", available_int={"lt": 1}))
             else:
                 bqry.filter.append(
                     Q("bool", must_not=Q("range", available_int={"lt": 1})))
+        return bqry
+
+    def search(self, req, idxnm, emb_mdl=None, highlight=False):
+        qst = req.get("question", "")
+        bqry, keywords = self.qryr.question(qst, min_match="30%")
+        bqry = self._add_filters(bqry, req)
         bqry.boost = 0.05
 
         s = Search()
         pg = int(req.get("page", 1)) - 1
-        ps = int(req.get("size", 1000))
         topk = int(req.get("topk", 1024))
+        ps = int(req.get("size", topk))
         src = req.get("fields", ["docnm_kwd", "content_ltks", "kb_id", "img_id", "title_tks", "important_kwd",
-                                 "image_id", "doc_id", "q_512_vec", "q_768_vec", "position_int",
+                                 "image_id", "doc_id", "q_512_vec", "q_768_vec", "position_int", "knowledge_graph_kwd",
                                  "q_1024_vec", "q_1536_vec", "available_int", "content_with_weight"])
 
         s = s.query(bqry)[pg * ps:(pg + 1) * ps]
@@ -78,7 +99,7 @@ class Dealer:
         if not qst:
             if not req.get("sort"):
                 s = s.sort(
-                    {"create_time": {"order": "desc", "unmapped_type": "date"}},
+                    #{"create_time": {"order": "desc", "unmapped_type": "date"}},
                     {"create_timestamp_flt": {
                         "order": "desc", "unmapped_type": "float"}}
                 )
@@ -88,7 +109,7 @@ class Dealer:
                                       "mode": "avg", "numeric_type": "double"}},
                     {"top_int": {"order": "asc", "unmapped_type": "float",
                                  "mode": "avg", "numeric_type": "double"}},
-                    {"create_time": {"order": "desc", "unmapped_type": "date"}},
+                    #{"create_time": {"order": "desc", "unmapped_type": "date"}},
                     {"create_timestamp_flt": {
                         "order": "desc", "unmapped_type": "float"}}
                 )
@@ -109,7 +130,7 @@ class Dealer:
                 qst, emb_mdl, req.get(
                     "similarity", 0.1), topk)
             s["knn"]["filter"] = bqry.to_dict()
-            if "highlight" in s:
+            if not highlight and "highlight" in s:
                 del s["highlight"]
             q_vec = s["knn"]["query_vector"]
         es_logger.info("【Q】: {}".format(json.dumps(s)))
@@ -117,8 +138,9 @@ class Dealer:
         es_logger.info("TOTAL: {}".format(self.es.getTotal(res)))
         if self.es.getTotal(res) == 0 and "knn" in s:
             bqry, _ = self.qryr.question(qst, min_match="10%")
-            if req.get("kb_ids"):
-                bqry.filter.append(Q("terms", kb_id=req["kb_ids"]))
+            if req.get("doc_ids"):
+                bqry = Q("bool", must=[])
+            bqry = self._add_filters(bqry, req)
             s["query"] = bqry.to_dict()
             s["knn"]["filter"] = bqry.to_dict()
             s["knn"]["similarity"] = 0.17
@@ -142,7 +164,7 @@ class Dealer:
             ids=self.es.getDocIds(res),
             query_vector=q_vec,
             aggregation=aggs,
-            highlight=self.getHighlight(res),
+            highlight=self.getHighlight(res, keywords, "content_with_weight"),
             field=self.getFields(res, src),
             keywords=list(kwds)
         )
@@ -153,26 +175,27 @@ class Dealer:
         bkts = res["aggregations"]["aggs_" + g]["buckets"]
         return [(b["key"], b["doc_count"]) for b in bkts]
 
-    def getHighlight(self, res):
-        def rmspace(line):
-            eng = set(list("qwertyuioplkjhgfdsazxcvbnm"))
-            r = []
-            for t in line.split(" "):
-                if not t:
-                    continue
-                if len(r) > 0 and len(
-                        t) > 0 and r[-1][-1] in eng and t[0] in eng:
-                    r.append(" ")
-                r.append(t)
-            r = "".join(r)
-            return r
-
+    def getHighlight(self, res, keywords, fieldnm):
         ans = {}
         for d in res["hits"]["hits"]:
             hlts = d.get("highlight")
             if not hlts:
                 continue
-            ans[d["_id"]] = "".join([a for a in list(hlts.items())[0][1]])
+            txt = "...".join([a for a in list(hlts.items())[0][1]])
+            if not is_english(txt.split(" ")):
+                ans[d["_id"]] = txt
+                continue
+
+            txt = d["_source"][fieldnm]
+            txt = re.sub(r"[\r\n]", " ", txt, flags=re.IGNORECASE|re.MULTILINE)
+            txts = []
+            for t in re.split(r"[.?!;\n]", txt):
+                for w in keywords:
+                    t = re.sub(r"(^|[ .?/'\"\(\)!,:;-])(%s)([ .?/'\"\(\)!,:;-])"%re.escape(w), r"\1<em>\2</em>\3", t, flags=re.IGNORECASE|re.MULTILINE)
+                if not re.search(r"<em>[^<>]+</em>", t, flags=re.IGNORECASE|re.MULTILINE): continue
+                txts.append(t)
+            ans[d["_id"]] = "...".join(txts) if txts else "...".join([a for a in list(hlts.items())[0][1]])
+
         return ans
 
     def getFields(self, sres, flds):
@@ -202,6 +225,8 @@ class Dealer:
     def insert_citations(self, answer, chunks, chunk_v,
                          embd_mdl, tkweight=0.1, vtweight=0.9):
         assert len(chunks) == len(chunk_v)
+        if not chunks:
+            return answer, set([])
         pieces = re.split(r"(```)", answer)
         if len(pieces) >= 3:
             i = 0
@@ -241,7 +266,7 @@ class Dealer:
 
         ans_v, _ = embd_mdl.encode(pieces_)
         assert len(ans_v[0]) == len(chunk_v[0]), "The dimension of query and chunk do not match: {} vs. {}".format(
-            len(ans_v[0]), len(chunk_v[0]))
+                len(ans_v[0]), len(chunk_v[0]))
 
         chunks_tks = [rag_tokenizer.tokenize(self.qryr.rmWWW(ck)).split(" ")
                       for ck in chunks]
@@ -307,6 +332,26 @@ class Dealer:
                                                         ins_tw, tkweight, vtweight)
         return sim, tksim, vtsim
 
+    def rerank_by_model(self, rerank_mdl, sres, query, tkweight=0.3,
+               vtweight=0.7, cfield="content_ltks"):
+        _, keywords = self.qryr.question(query)
+
+        for i in sres.ids:
+            if isinstance(sres.field[i].get("important_kwd", []), str):
+                sres.field[i]["important_kwd"] = [sres.field[i]["important_kwd"]]
+        ins_tw = []
+        for i in sres.ids:
+            content_ltks = sres.field[i][cfield].split(" ")
+            title_tks = [t for t in sres.field[i].get("title_tks", "").split(" ") if t]
+            important_kwd = sres.field[i].get("important_kwd", [])
+            tks = content_ltks + title_tks + important_kwd
+            ins_tw.append(tks)
+
+        tksim = self.qryr.token_similarity(keywords, ins_tw)
+        vtsim,_ = rerank_mdl.similarity(" ".join(keywords), [rmSpace(" ".join(tks)) for tks in ins_tw])
+
+        return tkweight*np.array(tksim) + vtweight*vtsim, tksim, vtsim
+
     def hybrid_similarity(self, ans_embd, ins_embd, ans, inst):
         return self.qryr.hybrid_similarity(ans_embd,
                                            ins_embd,
@@ -314,28 +359,37 @@ class Dealer:
                                            rag_tokenizer.tokenize(inst).split(" "))
 
     def retrieval(self, question, embd_mdl, tenant_id, kb_ids, page, page_size, similarity_threshold=0.2,
-                  vector_similarity_weight=0.3, top=1024, doc_ids=None, aggs=True):
+                  vector_similarity_weight=0.3, top=1024, doc_ids=None, aggs=True, rerank_mdl=None, highlight=False):
         ranks = {"total": 0, "chunks": [], "doc_aggs": {}}
         if not question:
             return ranks
-        req = {"kb_ids": kb_ids, "doc_ids": doc_ids, "size": page_size,
+        RERANK_PAGE_LIMIT = 3
+        req = {"kb_ids": kb_ids, "doc_ids": doc_ids, "size": page_size*RERANK_PAGE_LIMIT,
                "question": question, "vector": True, "topk": top,
-               "similarity": similarity_threshold}
-        sres = self.search(req, index_name(tenant_id), embd_mdl)
+               "similarity": similarity_threshold,
+               "available_int": 1}
+        if page > RERANK_PAGE_LIMIT:
+            req["page"] = page
+            req["size"] = page_size
+        sres = self.search(req, index_name(tenant_id), embd_mdl, highlight)
+        ranks["total"] = sres.total
 
-        sim, tsim, vsim = self.rerank(
-            sres, question, 1 - vector_similarity_weight, vector_similarity_weight)
-        idx = np.argsort(sim * -1)
+        if page <= RERANK_PAGE_LIMIT:
+            if rerank_mdl:
+                sim, tsim, vsim = self.rerank_by_model(rerank_mdl,
+                    sres, question, 1 - vector_similarity_weight, vector_similarity_weight)
+            else:
+                sim, tsim, vsim = self.rerank(
+                    sres, question, 1 - vector_similarity_weight, vector_similarity_weight)
+            idx = np.argsort(sim * -1)[(page-1)*page_size:page*page_size]
+        else:
+            sim = tsim = vsim = [1]*len(sres.ids)
+            idx = list(range(len(sres.ids)))
 
         dim = len(sres.query_vector)
-        start_idx = (page - 1) * page_size
         for i in idx:
             if sim[i] < similarity_threshold:
                 break
-            ranks["total"] += 1
-            start_idx -= 1
-            if start_idx >= 0:
-                continue
             if len(ranks["chunks"]) >= page_size:
                 if aggs:
                     continue
@@ -358,6 +412,11 @@ class Dealer:
                 "vector": self.trans2floats(sres.field[id].get("q_%d_vec" % dim, "\t".join(["0"] * dim))),
                 "positions": sres.field[id].get("position_int", "").split("\t")
             }
+            if highlight:
+                if id in sres.highlight:
+                    d["highlight"] = rmSpace(sres.highlight[id])
+                else:
+                    d["highlight"] = d["content_with_weight"]
             if len(d["positions"]) % 5 == 0:
                 poss = []
                 for i in range(0, len(d["positions"]), 5):
@@ -403,3 +462,13 @@ class Dealer:
         except Exception as e:
             chat_logger.error(f"SQL failure: {sql} =>" + str(e))
             return {"error": str(e)}
+
+    def chunk_list(self, doc_id, tenant_id, max_count=1024, fields=["docnm_kwd", "content_with_weight", "img_id"]):
+        s = Search()
+        s = s.query(Q("match", doc_id=doc_id))[0:max_count]
+        s = s.to_dict()
+        es_res = self.es.search(s, idxnm=index_name(tenant_id), timeout="600s", src=fields)
+        res = []
+        for index, chunk in enumerate(es_res['hits']['hits']):
+            res.append({fld: chunk['_source'].get(fld) for fld in fields})
+        return res

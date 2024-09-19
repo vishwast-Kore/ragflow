@@ -18,6 +18,7 @@ export default {
   my_llm: `${api_host}/llm/my_llms`,
   set_api_key: `${api_host}/llm/set_api_key`,
   add_llm: `${api_host}/llm/add_llm`,
+  delete_llm: `${api_host}/llm/delete_llm`,
 
   // knowledge base
   kb_list: `${api_host}/kb/list`,
@@ -34,12 +35,13 @@ export default {
   switch_chunk: `${api_host}/chunk/switch`,
   rm_chunk: `${api_host}/chunk/rm`,
   retrieval_test: `${api_host}/chunk/retrieval_test`,
+  knowledge_graph: `${api_host}/chunk/knowledge_graph`,
 
   // document
-  upload: `${api_host}/document/upload`,
   get_document_list: `${api_host}/document/list`,
   document_change_status: `${api_host}/document/change_status`,
   document_rm: `${api_host}/document/rm`,
+  document_delete: `${api_host}/api/document`,
   document_rename: `${api_host}/document/rename`,
   document_create: `${api_host}/document/create`,
   document_run: `${api_host}/document/run`,
@@ -47,6 +49,9 @@ export default {
   document_thumbnails: `${api_host}/document/thumbnails`,
   get_document_file: `${api_host}/document/get`,
   document_upload: `${api_host}/document/upload`,
+  web_crawl: `${api_host}/document/web_crawl`,
+  document_infos: `${api_host}/document/infos`,
+  upload_and_parse: `${api_host}/document/upload_and_parse`,
 
   // chat
   setDialog: `${api_host}/dialog/set`,
@@ -58,6 +63,12 @@ export default {
   listConversation: `${api_host}/conversation/list`,
   removeConversation: `${api_host}/conversation/rm`,
   completeConversation: `${api_host}/conversation/completion`,
+  deleteMessage: `${api_host}/conversation/delete_msg`,
+  thumbup: `${api_host}/conversation/thumbup`,
+  tts: `${api_host}/conversation/tts`,
+  ask: `${api_host}/conversation/ask`,
+  mindmap: `${api_host}/conversation/mindmap`,
+  getRelatedQuestions: `${api_host}/conversation/related_questions`,
   // chat for external
   createToken: `${api_host}/api/new_token`,
   listToken: `${api_host}/api/token_list`,
@@ -66,6 +77,7 @@ export default {
   createExternalConversation: `${api_host}/api/new_conversation`,
   getExternalConversation: `${api_host}/api/conversation`,
   completeExternalConversation: `${api_host}/api/completion`,
+  uploadAndParseExternal: `${api_host}/api/document/upload_and_parse`,
 
   // file manager
   listFile: `${api_host}/file/list`,
@@ -75,4 +87,20 @@ export default {
   getAllParentFolder: `${api_host}/file/all_parent_folder`,
   createFolder: `${api_host}/file/create`,
   connectFileToKnowledge: `${api_host}/file2document/convert`,
+  getFile: `${api_host}/file/get`,
+  moveFile: `${api_host}/file/mv`,
+
+  // system
+  getSystemVersion: `${api_host}/system/version`,
+  getSystemStatus: `${api_host}/system/status`,
+
+  // flow
+  listTemplates: `${api_host}/canvas/templates`,
+  listCanvas: `${api_host}/canvas/list`,
+  getCanvas: `${api_host}/canvas/get`,
+  removeCanvas: `${api_host}/canvas/rm`,
+  setCanvas: `${api_host}/canvas/set`,
+  resetCanvas: `${api_host}/canvas/reset`,
+  runCanvas: `${api_host}/canvas/completion`,
+  testDbConnect: `${api_host}/canvas/test_db_connect`,
 };
