@@ -3,3 +3,4 @@ recursive-include ragflow/api *
 recursive-include ragflow/conf *
 recursive-include ragflow/deepdoc *
 recursive-include ragflow/rag *
+recursive-include ragflow/agent *

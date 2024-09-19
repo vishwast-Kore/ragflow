@@ -39,7 +39,6 @@ class RAGFlowPdfParser:
         self.ocr = OCR()
         if hasattr(self, "model_speciess"):
             self.layouter = LayoutRecognizer("layout." + self.model_speciess)
-
         else:
             self.layouter = LayoutRecognizer("layout")
         self.tbl_det = TableStructureRecognizer()
@@ -286,7 +285,7 @@ class RAGFlowPdfParser:
               "page_number": pagenum} for b, t in bxs if b[0][0] <= b[1][0] and b[0][1] <= b[-1][1]],
             self.mean_height[-1] / 3
         )
-        
+
         # merge chars in the same rect
         for c in Recognizer.sort_Y_firstly(
                 chars, self.mean_height[pagenum - 1] // 4):
@@ -421,6 +420,12 @@ class RAGFlowPdfParser:
             detach_feats = [b["x1"] < b_["x0"],
                             b["x0"] > b_["x1"]]
             if (any(feats) and not any(concatting_feats)) or any(detach_feats):
+                print(
+                    b["text"],
+                    b_["text"],
+                    any(feats),
+                    any(concatting_feats),
+                    any(detach_feats))
                 i += 1
                 continue
             # merge up and down
@@ -933,7 +938,6 @@ class RAGFlowPdfParser:
 
     def __images__(self, fnm, zoomin=3, page_from=0,
                    page_to=299, callback=None):
-
         self.lefted_chars = []
         self.mean_height = []
         self.mean_width = []
@@ -948,8 +952,10 @@ class RAGFlowPdfParser:
                 fnm, str) else pdfplumber.open(BytesIO(fnm))
             self.page_images = [p.to_image(resolution=72 * zoomin).annotated for i, p in
                                 enumerate(self.pdf.pages[page_from:page_to])]
-            self.page_chars = [[{**c, 'top': c['top'], 'bottom': c['bottom']} for c in page.dedupe_chars().chars if self._has_color(c)] for page in
-                               self.pdf.pages[page_from:page_to]]
+            self.page_chars = [
+                [{**c, 'top': c['top'], 'bottom': c['bottom']} for c in page.dedupe_chars().chars if self._has_color(c)]
+                for page in
+                self.pdf.pages[page_from:page_to]]
             self.total_page = len(self.pdf.pages)
         except Exception as e:
             logging.error(str(e))

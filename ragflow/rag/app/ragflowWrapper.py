@@ -1,7 +1,9 @@
 from ragflow.rag.app import paper, laws, naive, one, table, book, manual
+# import paper,laws,naive,one,table,book,manual
 import logging
 import traceback
 from share.constants import Constants as ShareConstants
+# debug_logger = logging.getLogger("cext_debug")
 debug_logger = logging.getLogger(ShareConstants.CHUNK_EXTRACT_LOGGER)
 
 class RagflowWrapper():
@@ -145,8 +147,8 @@ class RagflowNaiveStrategy(RagflowWrapper):
             extraction_config = request_payload.get('extraction_model', {}).get('config', {})
             ranges = extraction_config.get("pageRange", [[0, 100000]])
             request_payload['extract_table_html'] = extraction_config.get('extractTableHTML', True)
-            request_payload['chunk_size'] = extraction_config.get('chunkLength', 1000)
-            request_payload['delimiter'] = extraction_config.get('textSplitter', 100)
+            request_payload['chunk_size'] = extraction_config.get('chunkLength', 128)
+            request_payload['delimiter'] = extraction_config.get('textSplitter', "\n!?。；！？")
             request_payload['sys_file_type'] = request_payload.get("file_type", "")
             raw_chunks = list()
             for range in ranges:
@@ -274,7 +276,7 @@ class RagflowBookStrategy(RagflowWrapper):
             ranges = extraction_config.get("pageRange", [[0, 100000]])
             request_payload['extract_table_html'] = extraction_config.get('extractTableHTML', True)
             request_payload['chunk_size'] = extraction_config.get('chunkLength', 1000)
-            request_payload['delimiter'] = extraction_config.get('textSplitter', 100)
+            request_payload['delimiter'] = extraction_config.get('textSplitter', "\n。；！？")
             request_payload['sys_file_type'] = request_payload.get("file_type", "")
             raw_chunks = list()
             for range in ranges:
@@ -332,6 +334,27 @@ class RagflowManualStrategy(RagflowWrapper):
             debug_logger.error("Ragflow Manual Strategy Failed to execute")
             debug_logger.error(traceback.format_exc())
             return []
+
+
+if __name__=="__main__":
+    request_payload = {
+    "local_file_path": "/home/Ragul.Sivakumar/Downloads/ev1.pdf",  # The path to the local file
+    "file_type": "pdf",  # The file type
+    "extraction_model": {
+        "config": {
+            "pageRange": [[1, 10]],  # Specify the page range you want to extract
+            "extractTableHTML": True  # Flag to extract tables in HTML format
+        }
+    }
+}
+    ragflowParser=RagflowWrapper()
+
+    parser=ragflowParser.get_extraction_strategy("general")
+    result=parser.extract_chunks(**request_payload)
+
+    with open('naiveResult.json', 'w') as file:
+        # Write the string to the file
+        file.write(str(result))
 
 
 
